@@ -2,36 +2,136 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MOUSSY</title>
-  <link rel="stylesheet" href="popup.css" />
+  <!--
+    MOUSSY — Launch Bridge Popup
+    ════════════════════════════
+    This popup exists for exactly one frame.
+    popup.js immediately opens settings.html in a new tab and calls window.close().
+
+    The splash screen below is rendered for the ~50ms window between
+    DOMContentLoaded and the close() call — it prevents any white flash
+    and gives the extension a premium, intentional feel.
+
+    Width × height is deliberately minimal to minimise the popup frame
+    flash on slower machines.
+  -->
+  <style>
+    /* ── Instant paint — no external font request needed for 50ms ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0a0c;
+      --purple:   #a855f7;
+      --pglow:    rgba(168, 85, 247, 0.5);
+    }
+
+    html, body {
+      width:  220px;
+      height: 90px;
+      background: var(--bg);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Faint grid — matches global design language */
+    body::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(168,85,247,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(168,85,247,0.05) 1px, transparent 1px);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+
+    /* Top + bottom edge lines */
+    body::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-top:    1px solid rgba(168,85,247,0.3);
+      border-bottom: 1px solid rgba(168,85,247,0.15);
+      pointer-events: none;
+    }
+
+    /* ── Splash content ── */
+    #splash {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      animation: appear 0.12s ease forwards;
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: scale(0.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .wordmark {
+      font-family:     'Courier New', 'Lucida Console', monospace; /* safe monospace fallback — no network req */
+      font-size:       16px;
+      font-weight:     700;
+      letter-spacing:  6px;
+      /* Neon purple gradient — pure CSS, no image */
+      background:      linear-gradient(90deg, #c084fc, var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow:     none;
+      filter:          drop-shadow(0 0 8px var(--pglow));
+    }
+
+    /* ── Animated launch bar ── */
+    .launch-bar {
+      width:         120px;
+      height:        2px;
+      background:    rgba(255,255,255,0.06);
+      border-radius: 2px;
+      overflow:      hidden;
+    }
+
+    .launch-fill {
+      height:           100%;
+      width:            0%;
+      background:       linear-gradient(90deg, var(--purple), #c084fc);
+      border-radius:    2px;
+      box-shadow:       0 0 8px var(--pglow);
+      animation:        fillBar 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes fillBar {
+      from { width:   0%; }
+      to   { width: 100%; }
+    }
+
+    .launch-label {
+      font-family:  'Courier New', monospace;
+      font-size:    9px;
+      letter-spacing: 2.5px;
+      color:        rgba(168, 85, 247, 0.6);
+    }
+  </style>
 </head>
 <body>
-  <!--
-    MOUSSY — Action Toolbar Popup
-    ==============================
-    This is the compact popup shown when the user clicks the extension icon.
-    It provides quick-access toggles and a link to the full Options page.
-
-    TODO:
-      - Enable / Disable gesture engine toggle
-      - Gesture sensitivity slider (quick access)
-      - Sound on/off toggle
-      - "Open Full Config" button → options/options.html
-      - Live gesture count / last gesture indicator
-  -->
-  <div id="moussy-popup">
-    <header id="popup-header">
-      <span class="logo">MOUSSY</span>
-      <span class="version">v0.1.0</span>
-    </header>
-    <main id="popup-body">
-      <p class="placeholder-text">Popup UI coming soon…</p>
-    </main>
-    <footer id="popup-footer">
-      <a id="open-options" href="#">Open Full Config ↗</a>
-    </footer>
+  <div id="splash" aria-label="Launching MOUSSY configuration panel" role="status">
+    <span class="wordmark">MOUSSY</span>
+    <div class="launch-bar" aria-hidden="true">
+      <div class="launch-fill"></div>
+    </div>
+    <span class="launch-label">LAUNCHING CONFIG</span>
   </div>
-  <script src="popup.js" type="module"></script>
+
+  <!--
+    NOTE: script is NOT type="module" here.
+    Modules are deferred and execute after the frame paint cycle —
+    we want synchronous execution on DOMContentLoaded so the tab opens
+    as fast as physically possible and window.close() fires cleanly.
+  -->
+  <script src="popup.js"></script>
 </body>
 </html>

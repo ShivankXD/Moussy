@@ -57,7 +57,14 @@
         "assets/sounds/*.mp3",
         "assets/sounds/*.ogg",
         "assets/icons/*.png",
-        "offscreen/offscreen.html"
+        "offscreen/offscreen.html",
+        "settings/settings.html",
+        "settings/settings.js",
+        "premium/premium.html",
+        "premium/premium.js",
+        "popup/popup.html",
+        "popup/popup.js",
+        "popup/popup.css"
       ],
       "matches": ["<all_urls>"]
     }

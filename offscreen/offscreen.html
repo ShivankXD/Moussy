@@ -2,26 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MOUSSY — Offscreen Audio</title>
+  <!--
+    MOUSSY — Offscreen Audio Document
+    ════════════════════════════════════
+    This document is created by background.js via chrome.offscreen.createDocument()
+    with reason: AUDIO_PLAYBACK.
+
+    It has NO visible UI — it exists solely to host a Web Audio API AudioContext,
+    which cannot be created inside a service worker (no DOM / AudioContext global).
+
+    Lifecycle:
+      • Created on first gesture sound trigger (lazy init — not created at install)
+      • Persists until background.js calls chrome.offscreen.closeDocument()
+        OR the service worker terminates (Chrome may GC it)
+      • background.js calls ensureDocument() before each playback to handle GC
+
+    Message contract (received from background.js):
+      {
+        target:  'offscreen',          ← routing tag
+        type:    'PLAY_SOUND',
+        payload: {
+          clip:   'metal_slash.mp3',   ← filename inside assets/sounds/
+          volume: 0.5                  ← 0.0–1.0 gain value
+        }
+      }
+
+    Audio pipeline:
+      fetch(chrome.runtime.getURL(clipPath))
+        → arrayBuffer()
+        → AudioContext.decodeAudioData()
+        → AudioBufferSourceNode
+        → GainNode (volume)
+        → AudioContext.destination
+  -->
 </head>
 <body>
   <!--
-    MOUSSY — Offscreen Document
-    ============================
-    Exists solely to host the Web Audio API context for premium sound playback.
-    The offscreen document runs off-screen so audio never blocks the active tab.
-
-    Chrome requires at least one DOM element to justify an offscreen document,
-    hence this minimal page.
-
-    Audio clips are triggered by messages from background.js:
-      { type: 'PLAY_SOUND', payload: { clip: 'gesture_match', volume: 0.8 } }
-
-    TODO:
-      - Implement AudioManager class (preload, cache, play, fade)
-      - Handle volume, pitch, and reverb parameters
-      - Support layered / stacked sound effects
+    Chrome requires the offscreen document to contain at least one element.
+    This comment counts as parsed content; the body tag satisfies Chrome's check.
+    No visible elements needed.
   -->
-  <script src="offscreen.js" type="module"></script>
+  <script src="offscreen.js"></script>
 </body>
 </html>

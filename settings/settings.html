@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MOUSSY — Gesture Config Matrix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Root ────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #0a0a0c;
+      --surface:       #121216;
+      --surface-2:     #18181f;
+      --surface-3:     #0e0e13;
+      --border:        #1e1e2a;
+      --border-bright: #2a2a3a;
+
+      --purple:        #a855f7;
+      --purple-dim:    #7c3aed;
+      --purple-glow:   rgba(168, 85, 247, 0.35);
+      --purple-faint:  rgba(168, 85, 247, 0.06);
+      --purple-tint:   rgba(168, 85, 247, 0.10);
+
+      --gold:          #f5c542;
+      --gold-dim:      #d4a017;
+      --gold-glow:     rgba(245, 197, 66, 0.30);
+
+      --cyan:          #22d3ee;
+      --green:         #4ade80;
+      --red:           #f87171;
+
+      --text:          #e8e8f0;
+      --text-muted:    #5a5a72;
+      --text-dim:      #9090aa;
+
+      --radius:        14px;
+      --radius-sm:     8px;
+      --font-head:     'Orbitron', monospace;
+      --font-body:     'Inter', sans-serif;
+      --font-mono:     'JetBrains Mono', monospace;
+      --transition:    0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Geometric Grid ──────────────────────────────────────────────────── */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background-image:
+        linear-gradient(rgba(168,85,247,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(168,85,247,0.04) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(ellipse 90% 90% at 50% 0%, black 20%, transparent 100%);
+      pointer-events: none;
+    }
+    .grid-bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(135deg, rgba(168,85,247,0.02) 1px, transparent 1px),
+        linear-gradient(45deg, rgba(168,85,247,0.02) 1px, transparent 1px);
+      background-size: 88px 88px;
+    }
+    .grid-bg::after {
+      content: '';
+      position: absolute;
+      top: -15%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1000px;
+      height: 500px;
+      background: radial-gradient(ellipse, rgba(168,85,247,0.09) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    /* ── Scanlines ───────────────────────────────────────────────────────── */
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.10) 2px, rgba(0,0,0,0.10) 4px);
+      pointer-events: none;
+      opacity: 0.25;
+    }
+
+    /* ── Page Shell ──────────────────────────────────────────────────────── */
+    .page {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Top Nav Bar ─────────────────────────────────────────────────────── */
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 62px;
+      background: rgba(12,12,16,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .topbar-logo {
+      font-family: var(--font-head);
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 5px;
+      background: linear-gradient(90deg, var(--purple), #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: none;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .plan-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-bright);
+      color: var(--text-muted);
+    }
+    .plan-chip.free .chip-dot { background: var(--text-muted); }
+    .plan-chip.monthly .chip-dot { background: var(--purple); box-shadow: 0 0 6px var(--purple); }
+    .plan-chip.legend .chip-dot { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+    .chip-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+    }
+
+    .topbar-save-btn {
+      font-family: var(--font-head);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      padding: 8px 18px;
+      background: linear-gradient(135deg, var(--purple-dim), var(--purple));
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 0 16px var(--purple-glow);
+    }
+    .topbar-save-btn:hover {
+      box-shadow: 0 0 28px var(--purple-glow);
+      transform: translateY(-1px);
+    }
+    .topbar-save-btn:active { transform: translateY(0); }
+    .topbar-save-btn.saved {
+      background: linear-gradient(135deg, #166534, #16a34a);
+      box-shadow: 0 0 16px rgba(74,222,128,0.35);
+    }
+
+    /* ── Sidebar Nav ─────────────────────────────────────────────────────── */
+    .sidebar {
+      grid-column: 1;
+      padding: 28px 0;
+      border-right: 1px solid var(--border);
+      background: var(--surface-3);
+      position: sticky;
+      top: 62px;
+      height: calc(100vh - 62px);
+      overflow-y: auto;
+    }
+
+    .sidebar-section-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 2.5px;
+      color: var(--text-muted);
+      padding: 0 20px 10px;
+      text-transform: uppercase;
+    }
+
+    .sidebar-nav { list-style: none; }
+    .sidebar-nav li { margin: 2px 8px; }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--transition);
+      border: 1px solid transparent;
+      text-decoration: none;
+    }
+    .nav-link:hover {
+      background: var(--surface-2);
+      color: var(--text-dim);
+    }
+    .nav-link.active {
+      background: var(--purple-tint);
+      border-color: rgba(168,85,247,0.2);
+      color: var(--purple);
+    }
+    .nav-icon {
+      width: 16px;
+      text-align: center;
+      font-style: normal;
+      font-size: 15px;
+      line-height: 1;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 14px 20px;
+    }
+
+    /* ── Main Content Area ───────────────────────────────────────────────── */
+    .content {
+      grid-column: 2;
+      padding: 40px 44px 80px;
+      overflow-y: auto;
+    }
+
+    /* ── Section Title ───────────────────────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      opacity: 0;
+      animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(14px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    .section-title-group {}
+    .section-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--purple);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-eyebrow::before {
+      content: '';
+      width: 20px;
+      height: 1px;
+      background: var(--purple);
+    }
+    .section-title {
+      font-family: var(--font-head);
+      font-size: clamp(20px, 2.5vw, 28px);
+      font-weight: 900;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #fff 0%, #c084fc 60%, var(--purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .section-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      max-width: 500px;
+      line-height: 1.7;
+    }
+
+    /* ── Module Card ─────────────────────────────────────────────────────── */
+    .module-card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: cardSlideIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    @keyframes cardSlideIn {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .module-card:nth-child(1) { animation-delay: 0.08s; }
+    .module-card:nth-child(2) { animation-delay: 0.16s; }
+    .module-card:nth-child(3) { animation-delay: 0.24s; }
+
+    /* Corner brackets on module cards */
+    .module-card::before, .module-card::after {
+      content: '';
+      position: absolute;
+      width: 12px; height: 12px;
+      border-color: var(--border-bright);
+      border-style: solid;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .module-card::before { top: 10px; left: 10px; border-width: 1px 0 0 1px; }
+    .module-card::after  { bottom: 10px; right: 10px; border-width: 0 1px 1px 0; }
+
+    .module-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .module-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .module-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: var(--purple-tint);
+      border: 1px solid rgba(168,85,247,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .module-title {
+      font-family: var(--font-head);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--text);
+    }
+    .module-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .module-badge {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+    .badge-free  {
+      background: rgba(74,222,128,0.10);
+      border: 1px solid rgba(74,222,128,0.3);
+      color: var(--green);
+    }
+    .badge-prime {
+      background: rgba(168,85,247,0.12);
+      border: 1px solid rgba(168,85,247,0.35);
+      color: var(--purple);
+    }
+
+    .module-body { padding: 24px; }
+
+    /* ── Gesture Slot ────────────────────────────────────────────────────── */
+    .slots-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .slot-item {
+      position: relative;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .slot-item:not(.locked):hover {
+      border-color: var(--border-bright);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    .slot-item.locked {
+      cursor: not-allowed;
+    }
+
+    /* Slot header row */
+    .slot-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .slot-number {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .slot-number::before {
+      content: '';
+      width: 4px; height: 4px;
+      background: var(--purple);
+      clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+    }
+    .slot-item.locked .slot-number::before { background: var(--text-muted); }
+
+    .slot-status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--border-bright);
+    }
+    .slot-item.has-value .slot-status-dot {
+      background: var(--green);
+      box-shadow: 0 0 6px rgba(74,222,128,0.5);
+    }
+
+    /* Gesture type dropdown */
+    .slot-gesture-select {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a5a72'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+    .slot-gesture-select:focus {
+      border-color: var(--purple-dim);
+      box-shadow: 0 0 0 2px rgba(124,58,237,0.2);
+    }
+    .slot-gesture-select option {
+      background: #181820;
+      color: var(--text);
+    }
+
+    /* URL input */
+    .slot-url-input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 8px 10px;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .slot-url-input::placeholder { color: var(--text-muted); }
+    .slot-url-input:focus {
+      border-color: var(--purple-dim);
+      box-shadow: 0 0 0 2px rgba(124,58,237,0.2);
+    }
+
+    /* ── LOCK OVERLAY ────────────────────────────────────────────────────── */
+    .lock-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: rgba(10, 10, 12, 0.72);
+      backdrop-filter: blur(3px);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: not-allowed;
+      /* Greyed border */
+      border: 1px solid var(--border);
+    }
+
+    .lock-icon-wrap {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: rgba(30,30,42,0.9);
+      border: 1px solid var(--border-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lock-svg {
+      width: 16px; height: 16px;
+      stroke: var(--text-muted);
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .lock-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    /* Greyed out inputs behind lock */
+    .slot-item.locked .slot-gesture-select,
+    .slot-item.locked .slot-url-input {
+      opacity: 0.25;
+      pointer-events: none;
+      filter: grayscale(1);
+    }
+
+    /* ── PRIME TOOLTIP ───────────────────────────────────────────────────── */
+    /*
+     * The Prime Protocol tooltip is a custom JS-driven floating panel,
+     * NOT a CSS ::after hack — because it needs a clickable upgrade link inside.
+     * It is positioned via JS and anchored to the hovered element.
+     */
+    #prime-tooltip {
+      position: fixed;
+      z-index: 9998;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(6px) scale(0.97);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      max-width: 320px;
+    }
+    #prime-tooltip.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;  /* allow clicking the upgrade link */
+    }
+
+    .prime-tooltip-inner {
+      background: #0f0f18;
+      border: 1px solid rgba(168,85,247,0.5);
+      border-radius: 10px;
+      padding: 14px 16px;
+      box-shadow:
+        0 0 0 1px rgba(168,85,247,0.08),
+        0 8px 40px rgba(0,0,0,0.8),
+        0 0 30px rgba(168,85,247,0.12),
+        inset 0 1px 0 rgba(168,85,247,0.1);
+      position: relative;
+    }
+
+    /* Arrow pointer at bottom of tooltip */
+    .prime-tooltip-inner::after {
+      content: '';
+      position: absolute;
+      bottom: -7px;
+      left: 50%;
+      transform: translateX(-50%) rotate(45deg);
+      width: 12px; height: 12px;
+      background: #0f0f18;
+      border-right: 1px solid rgba(168,85,247,0.5);
+      border-bottom: 1px solid rgba(168,85,247,0.5);
+    }
+
+    .prime-tooltip-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .prime-lock-icon {
+      width: 14px; height: 14px;
+      stroke: var(--purple);
+      fill: none;
+      stroke-width: 1.8;
+      flex-shrink: 0;
+    }
+
+    .prime-tooltip-title {
+      font-family: var(--font-head);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--purple);
+      text-shadow: 0 0 12px var(--purple-glow);
+    }
+
+    .prime-tooltip-body {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.65;
+      margin-bottom: 12px;
+    }
+
+    .prime-tooltip-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-head);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      padding: 7px 14px;
+      background: linear-gradient(135deg, var(--purple-dim), var(--purple));
+      color: #fff;
+      border-radius: 5px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: box-shadow var(--transition), transform var(--transition);
+      box-shadow: 0 0 16px var(--purple-glow);
+      width: 100%;
+      justify-content: center;
+    }
+    .prime-tooltip-link:hover {
+      box-shadow: 0 0 28px var(--purple-glow);
+      transform: translateY(-1px);
+    }
+
+    /* ── Toggle Switch ───────────────────────────────────────────────────── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .toggle-row:last-child { border-bottom: none; }
+
+    .toggle-info { flex: 1; padding-right: 20px; }
+
+    .toggle-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toggle-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .feature-pill {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 1.2px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      background: rgba(168,85,247,0.12);
+      border: 1px solid rgba(168,85,247,0.3);
+      color: var(--purple);
+      white-space: nowrap;
+    }
+
+    /* The actual toggle */
+    .toggle-switch-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 26px;
+      cursor: pointer;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0; height: 0;
+      position: absolute;
+    }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: 26px;
+      transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+    }
+    .toggle-thumb {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 18px; height: 18px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), background 0.25s, box-shadow 0.25s;
+    }
+    .toggle-switch input:checked ~ .toggle-track {
+      background: rgba(168,85,247,0.2);
+      border-color: var(--purple-dim);
+      box-shadow: 0 0 12px var(--purple-glow);
+    }
+    .toggle-switch input:checked ~ .toggle-thumb {
+      transform: translateX(22px);
+      background: var(--purple);
+      box-shadow: 0 0 10px var(--purple-glow);
+    }
+    .toggle-switch input:disabled ~ .toggle-track { opacity: 0.3; }
+    .toggle-switch input:disabled ~ .toggle-thumb { opacity: 0.3; }
+
+    /* Lock treatment for premium toggle rows */
+    .toggle-row.locked {
+      cursor: not-allowed;
+    }
+    .toggle-row.locked .toggle-label,
+    .toggle-row.locked .toggle-desc {
+      opacity: 0.35;
+      filter: grayscale(0.8);
+    }
+    .toggle-row.locked .toggle-switch {
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* Lock icon inline with toggle */
+    .inline-lock {
+      width: 14px; height: 14px;
+      stroke: var(--text-muted);
+      fill: none;
+      stroke-width: 1.5;
+      flex-shrink: 0;
+      opacity: 0.5;
+    }
+
+    /* ── Upgrade CTA Banner ──────────────────────────────────────────────── */
+    .upgrade-banner {
+      position: relative;
+      background: linear-gradient(135deg, #0e0b18, #130f1f);
+      border: 1px solid rgba(168,85,247,0.25);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      overflow: hidden;
+      opacity: 0;
+      animation: cardSlideIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.32s forwards;
+    }
+    .upgrade-banner::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: -20%;
+      width: 60%; height: 200%;
+      background: radial-gradient(ellipse, rgba(168,85,247,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .upgrade-banner-text { position: relative; }
+    .upgrade-banner-title {
+      font-family: var(--font-head);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--purple);
+      text-shadow: 0 0 16px var(--purple-glow);
+      margin-bottom: 6px;
+    }
+    .upgrade-banner-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 440px;
+    }
+    .upgrade-banner-btn {
+      position: relative;
+      flex-shrink: 0;
+      font-family: var(--font-head);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      padding: 12px 22px;
+      background: linear-gradient(135deg, var(--purple-dim), var(--purple));
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 0 20px var(--purple-glow);
+      white-space: nowrap;
+      text-decoration: none;
+      display: inline-block;
+      overflow: hidden;
+    }
+    .upgrade-banner-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.5s;
+    }
+    .upgrade-banner-btn:hover::before { transform: translateX(100%); }
+    .upgrade-banner-btn:hover {
+      box-shadow: 0 0 36px var(--purple-glow), 0 6px 24px rgba(168,85,247,0.3);
+      transform: translateY(-2px);
+    }
+
+    /* ── Slot count display ──────────────────────────────────────────────── */
+    .slot-count-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 12px 16px;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .slot-pips {
+      display: flex;
+      gap: 5px;
+    }
+    .slot-pip {
+      width: 20px; height: 6px;
+      border-radius: 3px;
+      background: var(--border-bright);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .slot-pip.active {
+      background: var(--purple);
+      box-shadow: 0 0 6px var(--purple-glow);
+    }
+    .slot-pip.locked-pip {
+      background: var(--border);
+      opacity: 0.4;
+    }
+    .slot-count-text {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+    .slot-count-text strong { color: var(--purple); }
+
+    /* ── Toast ───────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: 8px;
+      padding: 12px 22px;
+      font-size: 12px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      letter-spacing: 0.5px;
+      opacity: 0;
+      transition: opacity 0.28s, transform 0.28s;
+      z-index: 9999;
+      pointer-events: none;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+      white-space: nowrap;
+    }
+    #toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.success { border-color: rgba(74,222,128,0.4); }
+    #toast.error   { border-color: rgba(248,113,113,0.4); }
+
+    /* ── Scrollbar ───────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--purple-dim); }
+
+    /* ── Responsive ──────────────────────────────────────────────────────── */
+    @media (max-width: 820px) {
+      .page { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
+      .sidebar {
+        grid-column: 1;
+        position: static;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 16px 0;
+        display: flex;
+        gap: 4px;
+        overflow-x: auto;
+      }
+      .sidebar-section-label { display: none; }
+      .sidebar-nav { display: flex; }
+      .sidebar-divider { display: none; }
+      .nav-link { white-space: nowrap; }
+      .content { grid-column: 1; padding: 28px 20px 60px; }
+      .slots-grid { grid-template-columns: 1fr; }
+      .upgrade-banner { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <!-- ── Prime Protocol Tooltip (singleton, JS-positioned) ─────────────── -->
+  <div id="prime-tooltip" role="tooltip" aria-live="polite">
+    <div class="prime-tooltip-inner">
+      <div class="prime-tooltip-header">
+        <svg class="prime-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0110 0v4"/>
+        </svg>
+        <span class="prime-tooltip-title">PRIME PROTOCOL LOCKED</span>
+      </div>
+      <p class="prime-tooltip-body">
+        You need to purchase a <strong style="color:var(--purple)">Pro</strong> or <strong style="color:var(--gold)">Legend</strong> plan to unlock this system matrix.
+      </p>
+      <a class="prime-tooltip-link" id="tooltip-upgrade-link" href="premium.html" target="_blank">
+        ⚡ UNLOCK NOW — VIEW PLANS
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Page Shell ─────────────────────────────────────────────────────── -->
+  <div class="page">
+
+    <!-- ── Top Nav ─────────────────────────────────────────────────────── -->
+    <nav class="topbar">
+      <span class="topbar-logo">MOUSSY</span>
+      <div class="topbar-right">
+        <div class="plan-chip free" id="plan-chip">
+          <span class="chip-dot"></span>
+          <span id="plan-chip-label">FREE ENGINE</span>
+        </div>
+        <button class="topbar-save-btn" id="save-btn" aria-label="Save settings">
+          SAVE CONFIG
+        </button>
+      </div>
+    </nav>
+
+    <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+    <aside class="sidebar" aria-label="Settings navigation">
+      <p class="sidebar-section-label">CONFIG MATRIX</p>
+      <ul class="sidebar-nav" role="list">
+        <li>
+          <a class="nav-link active" href="#gesture-slots" id="nav-gestures">
+            <i class="nav-icon">⌖</i> Gesture Slots
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" href="#premium-toggles" id="nav-premium">
+            <i class="nav-icon">◈</i> Premium Features
+          </a>
+        </li>
+      </ul>
+      <div class="sidebar-divider"></div>
+      <p class="sidebar-section-label">NAVIGATION</p>
+      <ul class="sidebar-nav" role="list">
+        <li>
+          <a class="nav-link" href="premium.html" target="_blank" id="nav-upgrade">
+            <i class="nav-icon">⚡</i> Upgrade Plan
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" href="popup/popup.html" id="nav-popup">
+            <i class="nav-icon">◧</i> Popup Config
+          </a>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- ── Main Content ─────────────────────────────────────────────────── -->
+    <main class="content" id="main-content">
+
+      <!-- ── Section: Gesture Slots ────────────────────────────────────── -->
+      <section id="gesture-slots" aria-labelledby="gesture-slots-title">
+        <div class="section-header">
+          <div class="section-title-group">
+            <div class="section-eyebrow">GESTURE MAP</div>
+            <h1 class="section-title" id="gesture-slots-title">Custom Site Slots</h1>
+            <p class="section-desc">
+              Bind a mouse gesture pattern to any URL. Right-click drag the pattern, release to navigate.
+              Slot 1 and 2 are available on the Free Engine tier.
+            </p>
+          </div>
+        </div>
+
+        <div class="module-card" id="slots-module">
+          <div class="module-header">
+            <div class="module-title-group">
+              <div class="module-icon" aria-hidden="true">⌖</div>
+              <div>
+                <div class="module-title">GESTURE BINDING MATRIX</div>
+                <div class="module-subtitle">Gesture stroke → destination URL</div>
+              </div>
+            </div>
+            <span class="module-badge badge-free">FREE: 2 SLOTS</span>
+          </div>
+
+          <div class="module-body">
+            <!-- Slot usage bar -->
+            <div class="slot-count-bar" id="slot-count-bar" aria-label="Slot usage">
+              <div class="slot-pips" id="slot-pips" aria-hidden="true">
+                <div class="slot-pip active" data-index="0"></div>
+                <div class="slot-pip" data-index="1"></div>
+                <div class="slot-pip locked-pip" data-index="2"></div>
+                <div class="slot-pip locked-pip" data-index="3"></div>
+                <div class="slot-pip locked-pip" data-index="4"></div>
+                <div class="slot-pip locked-pip" data-index="5"></div>
+              </div>
+              <span class="slot-count-text">
+                <strong id="slot-used-count">0</strong> / <span id="slot-total-count">2</span> slots configured
+              </span>
+            </div>
+
+            <!-- 6 slots grid -->
+            <div class="slots-grid" id="slots-grid" role="list">
+
+              <!-- SLOT 1 — FREE -->
+              <div class="slot-item" data-slot="1" role="listitem">
+                <div class="slot-header">
+                  <span class="slot-number">SLOT 01</span>
+                  <div class="slot-status-dot" aria-hidden="true"></div>
+                </div>
+                <select class="slot-gesture-select" id="slot-1-gesture" aria-label="Slot 1 gesture type">
+                  <option value="">— SELECT GESTURE —</option>
+                  <option value="swipe-right">→ SWIPE RIGHT</option>
+                  <option value="swipe-left">← SWIPE LEFT</option>
+                  <option value="swipe-up">↑ SWIPE UP</option>
+                  <option value="swipe-down">↓ SWIPE DOWN</option>
+                  <option value="l-down-right">L SHAPE (↓→)</option>
+                  <option value="l-down-left">L SHAPE (↓←)</option>
+                  <option value="l-up-right">L SHAPE (↑→)</option>
+                  <option value="l-up-left">L SHAPE (↑←)</option>
+                </select>
+                <input
+                  class="slot-url-input"
+                  id="slot-1-url"
+                  type="url"
+                  placeholder="https://example.com"
+                  aria-label="Slot 1 destination URL"
+                  autocomplete="off"
+                />
+              </div>
+
+              <!-- SLOT 2 — FREE -->
+              <div class="slot-item" data-slot="2" role="listitem">
+                <div class="slot-header">
+                  <span class="slot-number">SLOT 02</span>
+                  <div class="slot-status-dot" aria-hidden="true"></div>
+                </div>
+                <select class="slot-gesture-select" id="slot-2-gesture" aria-label="Slot 2 gesture type">
+                  <option value="">— SELECT GESTURE —</option>
+                  <option value="swipe-right">→ SWIPE RIGHT</option>
+                  <option value="swipe-left">← SWIPE LEFT</option>
+                  <option value="swipe-up">↑ SWIPE UP</option>
+                  <option value="swipe-down">↓ SWIPE DOWN</option>
+                  <option value="l-down-right">L SHAPE (↓→)</option>
+                  <option value="l-down-left">L SHAPE (↓←)</option>
+                  <option value="l-up-right">L SHAPE (↑→)</option>
+                  <option value="l-up-left">L SHAPE (↑←)</option>
+                </select>
+                <input
+                  class="slot-url-input"
+                  id="slot-2-url"
+                  type="url"
+                  placeholder="https://example.com"
+                  aria-label="Slot 2 destination URL"
+                  autocomplete="off"
+                />
+              </div>
+
+              <!-- SLOT 3 — LOCKED -->
+              <div class="slot-item locked" data-slot="3" data-locked="true" role="listitem" aria-label="Slot 3 — Premium locked">
+                <div class="slot-header">
+                  <span class="slot-number">SLOT 03</span>
+                  <div class="slot-status-dot" aria-hidden="true"></div>
+                </div>
+                <select class="slot-gesture-select" id="slot-3-gesture" aria-hidden="true" tabindex="-1" disabled>
+                  <option value="">— SELECT GESTURE —</option>
+                </select>
+                <input class="slot-url-input" id="slot-3-url" type="url" placeholder="https://example.com" aria-hidden="true" tabindex="-1" disabled />
+                <!-- Lock overlay -->
+                <div class="lock-overlay" aria-hidden="true">
+                  <div class="lock-icon-wrap">
+                    <svg class="lock-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  </div>
+                  <span class="lock-label">PRO ONLY</span>
+                </div>
+              </div>
+
+              <!-- SLOT 4 — LOCKED -->
+              <div class="slot-item locked" data-slot="4" data-locked="true" role="listitem" aria-label="Slot 4 — Premium locked">
+                <div class="slot-header">
+                  <span class="slot-number">SLOT 04</span>
+                  <div class="slot-status-dot" aria-hidden="true"></div>
+                </div>
+                <select class="slot-gesture-select" id="slot-4-gesture" aria-hidden="true" tabindex="-1" disabled>
+                  <option value="">— SELECT GESTURE —</option>
+                </select>
+                <input class="slot-url-input" id="slot-4-url" type="url" placeholder="https://example.com" aria-hidden="true" tabindex="-1" disabled />
+                <div class="lock-overlay" aria-hidden="true">
+                  <div class="lock-icon-wrap">
+                    <svg class="lock-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  </div>
+                  <span class="lock-label">PRO ONLY</span>
+                </div>
+              </div>
+
+              <!-- SLOT 5 — LOCKED -->
+              <div class="slot-item locked" data-slot="5" data-locked="true" role="listitem" aria-label="Slot 5 — Premium locked">
+                <div class="slot-header">
+                  <span class="slot-number">SLOT 05</span>
+                  <div class="slot-status-dot" aria-hidden="true"></div>
+                </div>
+                <select class="slot-gesture-select" id="slot-5-gesture" aria-hidden="true" tabindex="-1" disabled>
+                  <option value="">— SELECT GESTURE —</option>
+                </select>
+                <input class="slot-url-input" id="slot-5-url" type="url" placeholder="https://example.com" aria-hidden="true" tabindex="-1" disabled />
+                <div class="lock-overlay" aria-hidden="true">
+                  <div class="lock-icon-wrap">
+                    <svg class="lock-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  </div>
+                  <span class="lock-label">PRO ONLY</span>
+                </div>
+              </div>
+
+              <!-- SLOT 6 — LOCKED -->
+              <div class="slot-item locked" data-slot="6" data-locked="true" role="listitem" aria-label="Slot 6 — Premium locked">
+                <div class="slot-header">
+                  <span class="slot-number">SLOT 06</span>
+                  <div class="slot-status-dot" aria-hidden="true"></div>
+                </div>
+                <select class="slot-gesture-select" id="slot-6-gesture" aria-hidden="true" tabindex="-1" disabled>
+                  <option value="">— SELECT GESTURE —</option>
+                </select>
+                <input class="slot-url-input" id="slot-6-url" type="url" placeholder="https://example.com" aria-hidden="true" tabindex="-1" disabled />
+                <div class="lock-overlay" aria-hidden="true">
+                  <div class="lock-icon-wrap">
+                    <svg class="lock-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  </div>
+                  <span class="lock-label">PRO ONLY</span>
+                </div>
+              </div>
+
+            </div><!-- /.slots-grid -->
+          </div><!-- /.module-body -->
+        </div><!-- /.module-card -->
+      </section>
+
+      <!-- ── Section: Premium Toggles ─────────────────────────────────── -->
+      <section id="premium-toggles" aria-labelledby="premium-toggles-title" style="margin-top: 48px;">
+        <div class="section-header" style="animation-delay: 0.10s;">
+          <div class="section-title-group">
+            <div class="section-eyebrow">PRIME FEATURES</div>
+            <h2 class="section-title" id="premium-toggles-title">System Modules</h2>
+            <p class="section-desc">
+              Advanced overlay and audio systems. Requires Monthly Pass or Legend access to activate.
+            </p>
+          </div>
+        </div>
+
+        <div class="module-card" style="animation-delay: 0.18s;" id="toggles-module">
+          <div class="module-header">
+            <div class="module-title-group">
+              <div class="module-icon" aria-hidden="true">◈</div>
+              <div>
+                <div class="module-title">PREMIUM CONFIGURATION</div>
+                <div class="module-subtitle">Locked modules — upgrade to enable</div>
+              </div>
+            </div>
+            <span class="module-badge badge-prime">PRIME ONLY</span>
+          </div>
+
+          <div class="module-body">
+
+            <!-- Toggle 1: HUD Clock -->
+            <div class="toggle-row locked" id="toggle-hud" data-locked="true" role="group" aria-label="HUD Clock toggle — premium locked">
+              <div class="toggle-info">
+                <div class="toggle-label">
+                  Center HUD Clock Display
+                  <svg class="inline-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  <span class="feature-pill">PRIME</span>
+                </div>
+                <p class="toggle-desc">
+                  Renders a glowing real-time clock HUD at the center of the active tab.
+                  Activated via a dedicated gesture stroke.
+                </p>
+              </div>
+              <div class="toggle-switch-wrap">
+                <label class="toggle-switch" aria-label="Enable HUD Clock">
+                  <input type="checkbox" id="toggle-hud-input" disabled aria-disabled="true" />
+                  <div class="toggle-track"></div>
+                  <div class="toggle-thumb"></div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Toggle 2: Sound Pack -->
+            <div class="toggle-row locked" id="toggle-sound" data-locked="true" role="group" aria-label="Sound Pack toggle — premium locked">
+              <div class="toggle-info">
+                <div class="toggle-label">
+                  Metallic Weapon Sound Feedback Pack
+                  <svg class="inline-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  <span class="feature-pill">PRIME</span>
+                </div>
+                <p class="toggle-desc">
+                  High-fidelity cyberpunk weapon click and mechanical audio cues
+                  triggered on each gesture recognition event via offscreen audio engine.
+                </p>
+              </div>
+              <div class="toggle-switch-wrap">
+                <label class="toggle-switch" aria-label="Enable Sound Pack">
+                  <input type="checkbox" id="toggle-sound-input" disabled aria-disabled="true" />
+                  <div class="toggle-track"></div>
+                  <div class="toggle-thumb"></div>
+                </label>
+              </div>
+            </div>
+
+          </div><!-- /.module-body -->
+        </div><!-- /.module-card -->
+
+        <!-- ── Upgrade Banner ────────────────────────────────────────── -->
+        <div class="upgrade-banner" id="upgrade-banner">
+          <div class="upgrade-banner-text">
+            <div class="upgrade-banner-title">⚡ PRIME PROTOCOL AVAILABLE</div>
+            <p class="upgrade-banner-desc">
+              Unlock all 6 gesture slots, HUD overlay, and sound packs.
+              Monthly Pass from <strong style="color:var(--purple)">$3.99/mo</strong> or grab the Legend Plan for a one-time <strong style="color:var(--gold)">$29.99</strong>.
+            </p>
+          </div>
+          <a class="upgrade-banner-btn" href="premium.html" target="_blank" id="banner-upgrade-link">
+            VIEW PLANS →
+          </a>
+        </div>
+
+      </section>
+
+    </main><!-- /.content -->
+  </div><!-- /.page -->
+
+  <!-- Toast -->
+  <div id="toast" role="alert" aria-live="assertive"></div>
+
+  <script src="settings.js"></script>
+</body>
+</html>
