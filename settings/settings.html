@@ -3,1280 +3,1963 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MOUSSY — Gesture Config Matrix</title>
+  <title>MOUSSY // SETTINGS DASHBOARD</title>
+  <meta name="description" content="MOUSSY Mouse Gesture Extension — Configure your control protocols, gesture modes, and system allocation matrix." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+
   <style>
-    /* ── Reset & Root ────────────────────────────────────────────────────── */
+    /* ── Reset ───────────────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:            #0a0a0c;
-      --surface:       #121216;
-      --surface-2:     #18181f;
-      --surface-3:     #0e0e13;
-      --border:        #1e1e2a;
-      --border-bright: #2a2a3a;
+      --bg:            #050508;
+      --surface:       #0d0d12;
+      --surface-2:     #111118;
+      --surface-3:     #0a0a10;
+      --surface-4:     #161620;
+      --border:        #1a1a26;
+      --border-bright: #252535;
+      --border-purple: rgba(168,85,247,0.3);
 
       --purple:        #a855f7;
       --purple-dim:    #7c3aed;
-      --purple-glow:   rgba(168, 85, 247, 0.35);
+      --purple-bright: #c084fc;
+      --purple-glow:   rgba(168, 85, 247, 0.4);
       --purple-faint:  rgba(168, 85, 247, 0.06);
       --purple-tint:   rgba(168, 85, 247, 0.10);
+      --purple-mid:    rgba(168, 85, 247, 0.18);
 
       --gold:          #f5c542;
       --gold-dim:      #d4a017;
-      --gold-glow:     rgba(245, 197, 66, 0.30);
+      --gold-glow:     rgba(245,197,66,0.35);
 
-      --cyan:          #22d3ee;
       --green:         #4ade80;
       --red:           #f87171;
+      --cyan:          #22d3ee;
 
-      --text:          #e8e8f0;
-      --text-muted:    #5a5a72;
-      --text-dim:      #9090aa;
+      --text:          #dde0f0;
+      --text-muted:    #4a4a66;
+      --text-dim:      #7878a0;
+      --text-mid:      #9090b8;
 
-      --radius:        14px;
-      --radius-sm:     8px;
+      --sidebar-w:     82px;
+      --topbar-h:      56px;
+      --radius:        6px;
+      --radius-sm:     4px;
       --font-head:     'Orbitron', monospace;
       --font-body:     'Inter', sans-serif;
-      --font-mono:     'JetBrains Mono', monospace;
-      --transition:    0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      --font-mono:     'Share Tech Mono', monospace;
+      --transition:    0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     html, body {
-      min-height: 100vh;
+      height: 100%;
       background: var(--bg);
       color: var(--text);
       font-family: var(--font-body);
-      overflow-x: hidden;
+      overflow: hidden;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Geometric Grid ──────────────────────────────────────────────────── */
-    .grid-bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
+    /* ── Tech Grid Background ─────────────────────────────────────────────── */
+    .tech-grid {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
       background-image:
-        linear-gradient(rgba(168,85,247,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(168,85,247,0.04) 1px, transparent 1px);
-      background-size: 44px 44px;
-      mask-image: radial-gradient(ellipse 90% 90% at 50% 0%, black 20%, transparent 100%);
-      pointer-events: none;
+        linear-gradient(rgba(168,85,247,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(168,85,247,0.025) 1px, transparent 1px);
+      background-size: 32px 32px;
     }
-    .grid-bg::before {
+    .tech-grid::after {
       content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(135deg, rgba(168,85,247,0.02) 1px, transparent 1px),
-        linear-gradient(45deg, rgba(168,85,247,0.02) 1px, transparent 1px);
-      background-size: 88px 88px;
-    }
-    .grid-bg::after {
-      content: '';
-      position: absolute;
-      top: -15%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 1000px;
-      height: 500px;
-      background: radial-gradient(ellipse, rgba(168,85,247,0.09) 0%, transparent 65%);
-      pointer-events: none;
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(168,85,247,0.07) 0%, transparent 70%);
     }
 
-    /* ── Scanlines ───────────────────────────────────────────────────────── */
+    /* Scanlines */
     .scanlines {
-      position: fixed;
-      inset: 0;
-      z-index: 1;
-      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.10) 2px, rgba(0,0,0,0.10) 4px);
-      pointer-events: none;
-      opacity: 0.25;
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
+      opacity: 0.4;
     }
+
+    /* Corner border decoration on outer frame */
+    .outer-frame {
+      position: fixed; inset: 0; z-index: 2; pointer-events: none;
+      border: 1px solid var(--border);
+    }
+    .outer-frame::before, .outer-frame::after {
+      content: ''; position: absolute;
+      width: 18px; height: 18px;
+      border-color: var(--purple-dim);
+      border-style: solid;
+      opacity: 0.5;
+    }
+    .outer-frame::before { top: 6px; left: 6px; border-width: 1px 0 0 1px; }
+    .outer-frame::after  { bottom: 6px; right: 6px; border-width: 0 1px 1px 0; }
+
+    /* Corner dots on topbar area */
+    .corner-dot {
+      position: fixed; z-index: 100;
+      width: 4px; height: 4px;
+      background: var(--purple-dim);
+      border-radius: 1px;
+      opacity: 0.6;
+    }
+    .corner-dot.tl { top: 4px; left: 4px; }
+    .corner-dot.tr { top: 4px; right: 4px; }
+    .corner-dot.bl { bottom: 4px; left: 4px; }
+    .corner-dot.br { bottom: 4px; right: 4px; }
 
     /* ── Page Shell ──────────────────────────────────────────────────────── */
     .page {
-      position: relative;
-      z-index: 2;
+      position: relative; z-index: 3;
       display: grid;
-      grid-template-columns: 240px 1fr;
-      grid-template-rows: auto 1fr;
-      min-height: 100vh;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      grid-template-rows: var(--topbar-h) 1fr;
+      height: 100vh;
     }
 
-    /* ── Top Nav Bar ─────────────────────────────────────────────────────── */
+    /* ── Top Bar ─────────────────────────────────────────────────────────── */
     .topbar {
       grid-column: 1 / -1;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 32px;
-      height: 62px;
-      background: rgba(12,12,16,0.85);
-      backdrop-filter: blur(12px);
+      padding: 0 20px 0 0;
+      height: var(--topbar-h);
+      background: rgba(5,5,8,0.95);
       border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      z-index: 50;
+      position: relative;
+      z-index: 20;
     }
 
-    .topbar-logo {
+    /* Top bar tech line decoration */
+    .topbar::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: var(--sidebar-w); right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, var(--purple-dim), transparent 40%);
+      opacity: 0.6;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      height: 100%;
+      padding-left: 14px;
+    }
+
+    /* Decepticon Logo Badge */
+    .logo-badge {
+      display: flex; align-items: center; gap: 10px;
+      height: 100%;
+      padding-right: 18px;
+      border-right: 1px solid var(--border);
+      margin-right: 18px;
+    }
+
+    .decepticon-svg {
+      width: 32px; height: 36px;
+      filter: drop-shadow(0 0 8px rgba(168,85,247,0.6));
+    }
+
+    .brand-text {
+      display: flex; flex-direction: column; gap: 1px;
+    }
+    .brand-name {
       font-family: var(--font-head);
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 900;
       letter-spacing: 5px;
-      background: linear-gradient(90deg, var(--purple), #c084fc);
+      background: linear-gradient(135deg, #fff 0%, var(--purple-bright) 50%, var(--purple) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
       text-shadow: none;
+      line-height: 1;
+    }
+    .brand-sub {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 3px;
+      color: var(--purple);
+      text-shadow: 0 0 10px var(--purple-glow);
+      opacity: 0.85;
+    }
+
+    .topbar-title-block {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .topbar-title {
+      font-family: var(--font-head);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: var(--purple-bright);
+      text-shadow: 0 0 14px var(--purple-glow);
+    }
+    .topbar-subtitle {
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
     }
 
     .topbar-right {
-      display: flex;
-      align-items: center;
-      gap: 20px;
+      display: flex; align-items: center; gap: 12px;
     }
 
-    .plan-chip {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      font-family: var(--font-mono);
-      font-size: 10px;
-      letter-spacing: 1.5px;
-      padding: 5px 12px;
-      border-radius: 20px;
+    .topbar-ctrl-btn {
+      width: 28px; height: 24px;
       border: 1px solid var(--border-bright);
+      border-radius: 3px;
+      background: var(--surface-2);
       color: var(--text-muted);
-    }
-    .plan-chip.free .chip-dot { background: var(--text-muted); }
-    .plan-chip.monthly .chip-dot { background: var(--purple); box-shadow: 0 0 6px var(--purple); }
-    .plan-chip.legend .chip-dot { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
-    .chip-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-    }
-
-    .topbar-save-btn {
-      font-family: var(--font-head);
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      padding: 8px 18px;
-      background: linear-gradient(135deg, var(--purple-dim), var(--purple));
-      color: #fff;
-      border: none;
-      border-radius: 6px;
+      font-size: 11px;
       cursor: pointer;
-      transition: all var(--transition);
-      box-shadow: 0 0 16px var(--purple-glow);
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color var(--transition), color var(--transition);
     }
-    .topbar-save-btn:hover {
-      box-shadow: 0 0 28px var(--purple-glow);
-      transform: translateY(-1px);
-    }
-    .topbar-save-btn:active { transform: translateY(0); }
-    .topbar-save-btn.saved {
-      background: linear-gradient(135deg, #166534, #16a34a);
-      box-shadow: 0 0 16px rgba(74,222,128,0.35);
-    }
+    .topbar-ctrl-btn:hover { border-color: var(--purple-dim); color: var(--text); }
+    .topbar-ctrl-btn.close:hover { border-color: #ef4444; color: #ef4444; }
 
-    /* ── Sidebar Nav ─────────────────────────────────────────────────────── */
+    /* ── Sidebar ─────────────────────────────────────────────────────────── */
     .sidebar {
       grid-column: 1;
-      padding: 28px 0;
-      border-right: 1px solid var(--border);
+      grid-row: 2;
       background: var(--surface-3);
-      position: sticky;
-      top: 62px;
-      height: calc(100vh - 62px);
-      overflow-y: auto;
-    }
-
-    .sidebar-section-label {
-      font-family: var(--font-mono);
-      font-size: 9px;
-      letter-spacing: 2.5px;
-      color: var(--text-muted);
-      padding: 0 20px 10px;
-      text-transform: uppercase;
-    }
-
-    .sidebar-nav { list-style: none; }
-    .sidebar-nav li { margin: 2px 8px; }
-
-    .nav-link {
+      border-right: 1px solid var(--border);
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      color: var(--text-muted);
+      padding: 16px 0;
+      gap: 6px;
+      overflow-y: auto;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Sidebar tech accent line */
+    .sidebar::after {
+      content: '';
+      position: absolute;
+      top: 0; right: -1px;
+      width: 1px; height: 40%;
+      background: linear-gradient(180deg, var(--purple-dim), transparent);
+      opacity: 0.4;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      padding: 10px 6px;
+      width: 68px;
+      border-radius: var(--radius);
       cursor: pointer;
-      transition: all var(--transition);
       border: 1px solid transparent;
+      transition: all var(--transition);
       text-decoration: none;
+      position: relative;
     }
-    .nav-link:hover {
-      background: var(--surface-2);
-      color: var(--text-dim);
+    .nav-item:hover {
+      background: var(--purple-faint);
+      border-color: rgba(168,85,247,0.12);
     }
-    .nav-link.active {
-      background: var(--purple-tint);
-      border-color: rgba(168,85,247,0.2);
-      color: var(--purple);
+    .nav-item.active {
+      background: var(--purple-mid);
+      border-color: var(--border-purple);
     }
-    .nav-icon {
-      width: 16px;
+    /* Active left accent bar */
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: -9px; top: 50%; transform: translateY(-50%);
+      width: 3px; height: 60%;
+      background: var(--purple);
+      border-radius: 0 2px 2px 0;
+      box-shadow: 0 0 8px var(--purple-glow);
+    }
+
+    .nav-icon-wrap {
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-icon-wrap svg {
+      width: 20px; height: 20px;
+      stroke: var(--text-muted);
+      fill: none;
+      stroke-width: 1.5;
+      transition: stroke var(--transition);
+    }
+    .nav-item:hover .nav-icon-wrap svg,
+    .nav-item.active .nav-icon-wrap svg {
+      stroke: var(--purple);
+      filter: drop-shadow(0 0 4px rgba(168,85,247,0.5));
+    }
+
+    .nav-label {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
       text-align: center;
-      font-style: normal;
-      font-size: 15px;
-      line-height: 1;
+      line-height: 1.2;
+    }
+    .nav-item.active .nav-label {
+      color: var(--purple-bright);
     }
 
     .sidebar-divider {
-      height: 1px;
+      width: 40px; height: 1px;
       background: var(--border);
-      margin: 14px 20px;
-    }
-
-    /* ── Main Content Area ───────────────────────────────────────────────── */
-    .content {
-      grid-column: 2;
-      padding: 40px 44px 80px;
-      overflow-y: auto;
-    }
-
-    /* ── Section Title ───────────────────────────────────────────────────── */
-    .section-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 32px;
-      opacity: 0;
-      animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-    @keyframes fadeUp {
-      from { opacity:0; transform:translateY(14px); }
-      to   { opacity:1; transform:translateY(0); }
-    }
-
-    .section-title-group {}
-    .section-eyebrow {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      letter-spacing: 3px;
-      color: var(--purple);
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .section-eyebrow::before {
-      content: '';
-      width: 20px;
-      height: 1px;
-      background: var(--purple);
-    }
-    .section-title {
-      font-family: var(--font-head);
-      font-size: clamp(20px, 2.5vw, 28px);
-      font-weight: 900;
-      letter-spacing: 1px;
-      background: linear-gradient(135deg, #fff 0%, #c084fc 60%, var(--purple) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .section-desc {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-top: 8px;
-      max-width: 500px;
-      line-height: 1.7;
-    }
-
-    /* ── Module Card ─────────────────────────────────────────────────────── */
-    .module-card {
-      position: relative;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      margin-bottom: 24px;
-      opacity: 0;
-      animation: cardSlideIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-    @keyframes cardSlideIn {
-      from { opacity:0; transform:translateY(20px); }
-      to   { opacity:1; transform:translateY(0); }
-    }
-    .module-card:nth-child(1) { animation-delay: 0.08s; }
-    .module-card:nth-child(2) { animation-delay: 0.16s; }
-    .module-card:nth-child(3) { animation-delay: 0.24s; }
-
-    /* Corner brackets on module cards */
-    .module-card::before, .module-card::after {
-      content: '';
-      position: absolute;
-      width: 12px; height: 12px;
-      border-color: var(--border-bright);
-      border-style: solid;
-      pointer-events: none;
-      z-index: 1;
-    }
-    .module-card::before { top: 10px; left: 10px; border-width: 1px 0 0 1px; }
-    .module-card::after  { bottom: 10px; right: 10px; border-width: 0 1px 1px 0; }
-
-    .module-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 24px 18px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .module-title-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .module-icon {
-      width: 36px; height: 36px;
-      border-radius: 8px;
-      background: var(--purple-tint);
-      border: 1px solid rgba(168,85,247,0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
+      margin: 4px 0;
       flex-shrink: 0;
     }
 
-    .module-title {
-      font-family: var(--font-head);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      color: var(--text);
-    }
-    .module-subtitle {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 3px;
-    }
-
-    .module-badge {
-      font-family: var(--font-mono);
-      font-size: 9px;
-      letter-spacing: 1.5px;
-      padding: 4px 10px;
-      border-radius: 4px;
-    }
-    .badge-free  {
-      background: rgba(74,222,128,0.10);
-      border: 1px solid rgba(74,222,128,0.3);
-      color: var(--green);
-    }
-    .badge-prime {
-      background: rgba(168,85,247,0.12);
-      border: 1px solid rgba(168,85,247,0.35);
-      color: var(--purple);
-    }
-
-    .module-body { padding: 24px; }
-
-    /* ── Gesture Slot ────────────────────────────────────────────────────── */
-    .slots-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .slot-item {
+    /* ── Main Content ────────────────────────────────────────────────────── */
+    .content {
+      grid-column: 2;
+      grid-row: 2;
+      overflow-y: auto;
+      padding: 18px 20px 40px;
       position: relative;
-      background: var(--surface-3);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      transition: border-color var(--transition), box-shadow var(--transition);
-    }
-    .slot-item:not(.locked):hover {
-      border-color: var(--border-bright);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-    .slot-item.locked {
-      cursor: not-allowed;
     }
 
-    /* Slot header row */
-    .slot-header {
+    /* ── Scrollbar ─────────────────────────────────────────────────────── */
+    .content::-webkit-scrollbar { width: 4px; }
+    .content::-webkit-scrollbar-track { background: transparent; }
+    .content::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+    .content::-webkit-scrollbar-thumb:hover { background: var(--purple-dim); }
+
+    /* ── Section Block ───────────────────────────────────────────────────── */
+    .section-block {
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      overflow: hidden;
+      position: relative;
+      opacity: 0;
+      animation: slideIn 0.4s cubic-bezier(0.22,1,0.36,1) forwards;
+    }
+    .section-block:nth-child(1) { animation-delay: 0.05s; }
+    .section-block:nth-child(2) { animation-delay: 0.12s; }
+    .section-block:nth-child(3) { animation-delay: 0.19s; }
+
+    @keyframes slideIn {
+      from { opacity:0; transform:translateY(10px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* Corner brackets on sections */
+    .section-block::before {
+      content: '//';
+      position: absolute;
+      top: 12px; right: 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--border-bright);
+      letter-spacing: 2px;
+      pointer-events: none;
+    }
+
+    .section-title-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 12px;
-    }
-
-    .slot-number {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      letter-spacing: 2px;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .slot-number::before {
-      content: '';
-      width: 4px; height: 4px;
-      background: var(--purple);
-      clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
-    }
-    .slot-item.locked .slot-number::before { background: var(--text-muted); }
-
-    .slot-status-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--border-bright);
-    }
-    .slot-item.has-value .slot-status-dot {
-      background: var(--green);
-      box-shadow: 0 0 6px rgba(74,222,128,0.5);
-    }
-
-    /* Gesture type dropdown */
-    .slot-gesture-select {
-      width: 100%;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border);
       background: var(--surface-2);
-      border: 1px solid var(--border-bright);
-      border-radius: 6px;
-      color: var(--text);
+    }
+
+    .section-title-left {
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .section-num {
+      width: 22px; height: 22px;
+      border-radius: 4px;
+      background: var(--purple-mid);
+      border: 1px solid var(--border-purple);
+      display: flex; align-items: center; justify-content: center;
       font-family: var(--font-mono);
       font-size: 11px;
-      letter-spacing: 0.5px;
-      padding: 8px 10px;
-      margin-bottom: 10px;
-      outline: none;
+      color: var(--purple-bright);
+      flex-shrink: 0;
+    }
+
+    .section-name {
+      font-family: var(--font-head);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      color: var(--text);
+    }
+
+    /* ── SECTION 1: Gesture Mode Cards ───────────────────────────────────── */
+    .gesture-cards-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .gesture-card {
+      position: relative;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 14px;
       cursor: pointer;
       transition: border-color var(--transition), box-shadow var(--transition);
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a5a72'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 10px center;
-      padding-right: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
-    .slot-gesture-select:focus {
-      border-color: var(--purple-dim);
-      box-shadow: 0 0 0 2px rgba(124,58,237,0.2);
+    .gesture-card:hover {
+      border-color: var(--border-purple);
     }
-    .slot-gesture-select option {
-      background: #181820;
-      color: var(--text);
+    .gesture-card.selected {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 1px rgba(168,85,247,0.15), inset 0 0 20px rgba(168,85,247,0.04);
     }
 
-    /* URL input */
-    .slot-url-input {
+    .gesture-card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    /* Radio button visual */
+    .gesture-radio {
+      width: 16px; height: 16px;
+      border: 2px solid var(--border-bright);
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 2px;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color var(--transition);
+    }
+    .gesture-card.selected .gesture-radio {
+      border-color: var(--purple);
+    }
+    .gesture-radio::after {
+      content: '';
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--purple);
+      transform: scale(0);
+      transition: transform var(--transition);
+      box-shadow: 0 0 6px var(--purple-glow);
+    }
+    .gesture-card.selected .gesture-radio::after { transform: scale(1); }
+
+    .gesture-card-title {
+      font-family: var(--font-head);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--purple-bright);
+      line-height: 1.4;
+    }
+    .gesture-card.selected .gesture-card-title {
+      color: var(--purple);
+      text-shadow: 0 0 10px var(--purple-glow);
+    }
+    .gesture-card-sub {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .gesture-card-desc {
+      font-size: 10px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* ── OMNI-CLOCK HUD Graphic ──────────────────────────────────────────── */
+    .omni-clock-graphic {
       width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 0 4px;
+    }
+
+    .omni-clock-graphic svg {
+      width: 120px; height: 120px;
+      filter: drop-shadow(0 0 12px rgba(168,85,247,0.5));
+    }
+
+    /* Spinning outer ring animation */
+    @keyframes rotateRing {
+      from { transform: rotate(0deg) translate(-50%, -50%); }
+      to   { transform: rotate(360deg) translate(-50%, -50%); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.7; }
+      50%       { opacity: 1; }
+    }
+    .ring-spin {
+      animation: spin-ring 8s linear infinite;
+      transform-origin: 60px 60px;
+    }
+    @keyframes spin-ring {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    .ring-spin-rev {
+      animation: spin-ring-rev 12s linear infinite;
+      transform-origin: 60px 60px;
+    }
+    @keyframes spin-ring-rev {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(-360deg); }
+    }
+    .cursor-pulse {
+      animation: pulseGlow 2s ease-in-out infinite;
+    }
+
+    /* ── FREE-HAND Matrix Graphic ────────────────────────────────────────── */
+    .freehand-graphic {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 0 4px;
+    }
+    .freehand-graphic svg {
+      width: 120px; height: 120px;
+      filter: drop-shadow(0 0 8px rgba(168,85,247,0.4));
+    }
+    @keyframes dashDraw {
+      from { stroke-dashoffset: 300; }
+      to   { stroke-dashoffset: 0; }
+    }
+    .trail-path {
+      stroke-dasharray: 300;
+      stroke-dashoffset: 0;
+      animation: dashDraw 2.5s ease-out infinite alternate;
+    }
+    @keyframes cursorFloat {
+      0%, 100% { transform: translate(78px, 70px); }
+      50%       { transform: translate(82px, 66px); }
+    }
+    .cursor-float {
+      animation: cursorFloat 2s ease-in-out infinite;
+    }
+
+    /* ── SECTION 2: Core Allocation Matrix ───────────────────────────────── */
+    .alloc-rows { padding: 0 14px 14px; }
+
+    .slot-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .slot-row:last-child { border-bottom: none; }
+
+    .slot-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      min-width: 48px;
+      flex-shrink: 0;
+    }
+
+    /* Gesture icon container */
+    .gesture-icon-box {
+      width: 60px; height: 40px;
       background: var(--surface-2);
       border: 1px solid var(--border-bright);
-      border-radius: 6px;
-      color: var(--text);
-      font-family: var(--font-mono);
-      font-size: 11px;
-      padding: 8px 10px;
-      outline: none;
-      transition: border-color var(--transition), box-shadow var(--transition);
-    }
-    .slot-url-input::placeholder { color: var(--text-muted); }
-    .slot-url-input:focus {
-      border-color: var(--purple-dim);
-      box-shadow: 0 0 0 2px rgba(124,58,237,0.2);
-    }
-
-    /* ── LOCK OVERLAY ────────────────────────────────────────────────────── */
-    .lock-overlay {
-      position: absolute;
-      inset: 0;
-      z-index: 10;
-      background: rgba(10, 10, 12, 0.72);
-      backdrop-filter: blur(3px);
-      border-radius: 10px;
+      border-radius: 4px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      cursor: not-allowed;
-      /* Greyed border */
-      border: 1px solid var(--border);
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .gesture-icon-box svg {
+      width: 20px; height: 14px;
+      fill: none;
+      stroke: var(--text-muted);
+      stroke-width: 1.3;
+    }
+    .gesture-icon-box span {
+      font-family: var(--font-mono);
+      font-size: 7px;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.1;
     }
 
-    .lock-icon-wrap {
+    /* Favicon square */
+    .favicon-box {
       width: 36px; height: 36px;
-      border-radius: 50%;
-      background: rgba(30,30,42,0.9);
+      background: var(--surface-2);
       border: 1px solid var(--border-bright);
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      font-size: 18px;
+    }
+
+    /* URL input */
+    .url-input-wrap {
+      flex: 1;
+      position: relative;
+    }
+    .url-input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .url-input::placeholder { color: var(--text-muted); }
+    .url-input:focus {
+      border-color: var(--purple-dim);
+      box-shadow: 0 0 0 2px rgba(124,58,237,0.15);
+    }
+
+    /* Action icon buttons */
+    .slot-actions {
+      display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+    }
+    .slot-action-btn {
+      width: 28px; height: 28px;
+      border: 1px solid var(--border-bright);
+      border-radius: 3px;
+      background: transparent;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all var(--transition);
+    }
+    .slot-action-btn svg {
+      width: 13px; height: 13px;
+      fill: none;
+      stroke: var(--text-muted);
+      stroke-width: 1.8;
+      transition: stroke var(--transition);
+    }
+    .slot-action-btn:hover { border-color: var(--border-purple); }
+    .slot-action-btn:hover svg { stroke: var(--purple-bright); }
+    .slot-action-btn.delete:hover { border-color: rgba(248,113,113,0.4); }
+    .slot-action-btn.delete:hover svg { stroke: var(--red); }
+
+    /* ── SECTION 3: Prime Extraction Protocols ───────────────────────────── */
+    .prime-section-bar {
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-2);
     }
 
-    .lock-svg {
-      width: 16px; height: 16px;
-      stroke: var(--text-muted);
-      fill: none;
+    .prime-upgrade-btn {
+      display: flex; align-items: center; gap: 7px;
+      font-family: var(--font-head);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 7px 14px;
+      background: linear-gradient(135deg, var(--purple-dim), var(--purple));
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all var(--transition);
+      box-shadow: 0 0 16px var(--purple-glow);
+      white-space: nowrap;
+      position: relative;
+      overflow: hidden;
+    }
+    .prime-upgrade-btn::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.5s;
+    }
+    .prime-upgrade-btn:hover::before { transform: translateX(100%); }
+    .prime-upgrade-btn:hover {
+      box-shadow: 0 0 28px var(--purple-glow), 0 4px 16px rgba(168,85,247,0.3);
+      transform: translateY(-1px);
+    }
+    .prime-upgrade-btn svg {
+      width: 11px; height: 11px;
+      fill: none; stroke: #fff;
+      stroke-width: 2;
+    }
+
+    /* Sub-section headers inside Section 3 */
+    .prime-sub-header {
+      padding: 10px 14px 6px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+    }
+
+    /* ── Locked Slot Rows ────────────────────────────────────────────────── */
+    .slot-row.locked {
+      opacity: 0.4;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+
+    .lock-badge {
+      display: flex; align-items: center; gap: 4px;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      flex-direction: column;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .lock-badge svg {
+      width: 13px; height: 13px;
+      fill: none; stroke: var(--text-muted);
       stroke-width: 1.5;
-      stroke-linecap: round;
-      stroke-linejoin: round;
     }
 
-    .lock-label {
+    /* Locked url input with lock icon inside */
+    .locked-input-wrap {
+      flex: 1; position: relative;
+    }
+    .locked-input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 9px 12px;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* ── Sub B: Widget Rows ───────────────────────────────────────────────── */
+    .widget-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      pointer-events: none;
+    }
+    .widget-row:last-of-type { border-bottom: none; }
+
+    .widget-checkbox {
+      width: 14px; height: 14px;
+      border: 1px solid var(--border-bright);
+      border-radius: 2px;
+      background: var(--surface-2);
+      flex-shrink: 0;
+      opacity: 0.35;
+    }
+    .widget-label {
       font-family: var(--font-mono);
       font-size: 9px;
       letter-spacing: 1.5px;
       color: var(--text-muted);
+      flex: 1;
+      opacity: 0.45;
+      text-transform: uppercase;
+    }
+    .premium-only-badge {
+      display: flex; align-items: center; gap: 4px;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      opacity: 0.45;
+      flex-shrink: 0;
+    }
+    .premium-only-badge svg {
+      width: 11px; height: 11px;
+      fill: none; stroke: var(--text-muted);
+      stroke-width: 1.5;
+    }
+
+    .locked-select {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 9px;
+      padding: 5px 20px 5px 8px;
+      opacity: 0.35;
+      pointer-events: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%234a4a66'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 7px center;
+    }
+
+    /* ── Sub C: Audio Node ────────────────────────────────────────────────── */
+    .audio-label {
+      padding: 10px 14px 8px;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      opacity: 0.6;
       text-transform: uppercase;
     }
 
-    /* Greyed out inputs behind lock */
-    .slot-item.locked .slot-gesture-select,
-    .slot-item.locked .slot-url-input {
-      opacity: 0.25;
+    .audio-options-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      padding: 0 14px 12px;
+    }
+
+    .audio-option-card {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface-3);
+      padding: 10px 10px 8px;
+      display: flex; flex-direction: column; gap: 6px;
+      position: relative;
+    }
+
+    /* Default click - active/free */
+    .audio-option-card.active-card {
+      border-color: var(--purple);
+      box-shadow: 0 0 12px rgba(168,85,247,0.15);
+    }
+
+    /* Locked audio cards */
+    .audio-option-card.locked-card {
+      opacity: 0.4;
       pointer-events: none;
-      filter: grayscale(1);
+    }
+
+    .audio-radio-row {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .audio-radio {
+      width: 13px; height: 13px;
+      border: 2px solid var(--border-bright);
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .active-card .audio-radio {
+      border-color: var(--purple);
+    }
+    .active-card .audio-radio::after {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--purple);
+      box-shadow: 0 0 5px var(--purple-glow);
+    }
+    .audio-card-name {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+    .active-card .audio-card-name {
+      color: var(--purple-bright);
+    }
+
+    /* Waveform graphic */
+    .waveform {
+      display: flex; align-items: center; gap: 1.5px;
+      height: 18px; padding: 0 2px;
+    }
+    .waveform-bar {
+      flex: 1; border-radius: 1px;
+      animation: waveAnim 1.2s ease-in-out infinite alternate;
+    }
+    .active-card .waveform-bar { background: var(--purple); }
+    .locked-card .waveform-bar { background: var(--border-bright); }
+
+    @keyframes waveAnim {
+      from { opacity: 0.4; }
+      to   { opacity: 1; }
+    }
+    .waveform-bar:nth-child(1)  { height: 30%; animation-delay: 0s; }
+    .waveform-bar:nth-child(2)  { height: 60%; animation-delay: 0.1s; }
+    .waveform-bar:nth-child(3)  { height: 100%; animation-delay: 0.2s; }
+    .waveform-bar:nth-child(4)  { height: 70%; animation-delay: 0.15s; }
+    .waveform-bar:nth-child(5)  { height: 45%; animation-delay: 0.05s; }
+    .waveform-bar:nth-child(6)  { height: 80%; animation-delay: 0.25s; }
+    .waveform-bar:nth-child(7)  { height: 55%; animation-delay: 0.1s; }
+    .waveform-bar:nth-child(8)  { height: 90%; animation-delay: 0.2s; }
+    .waveform-bar:nth-child(9)  { height: 40%; animation-delay: 0.05s; }
+    .waveform-bar:nth-child(10) { height: 65%; animation-delay: 0.15s; }
+    .waveform-bar:nth-child(11) { height: 30%; animation-delay: 0.3s; }
+    .waveform-bar:nth-child(12) { height: 75%; animation-delay: 0.1s; }
+
+    .audio-free-badge {
+      font-family: var(--font-mono);
+      font-size: 7px;
+      letter-spacing: 1px;
+      color: var(--green);
+      border: 1px solid rgba(74,222,128,0.25);
+      border-radius: 2px;
+      padding: 1px 5px;
+      width: fit-content;
+    }
+    .audio-prime-badge {
+      font-family: var(--font-mono);
+      font-size: 7px;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 1px 5px;
+      width: fit-content;
+      opacity: 0.5;
+    }
+
+    /* Audio lock row at bottom */
+    .audio-lock-notice {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 14px;
+      border-top: 1px solid var(--border);
+      pointer-events: none;
+    }
+    .audio-lock-notice svg {
+      width: 12px; height: 12px;
+      fill: none; stroke: var(--text-muted);
+      stroke-width: 1.5; flex-shrink: 0; opacity: 0.4;
+    }
+    .audio-lock-notice span {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      opacity: 0.4;
+      text-transform: uppercase;
     }
 
     /* ── PRIME TOOLTIP ───────────────────────────────────────────────────── */
-    /*
-     * The Prime Protocol tooltip is a custom JS-driven floating panel,
-     * NOT a CSS ::after hack — because it needs a clickable upgrade link inside.
-     * It is positioned via JS and anchored to the hovered element.
-     */
     #prime-tooltip {
       position: fixed;
-      z-index: 9998;
+      z-index: 9999;
       pointer-events: none;
       opacity: 0;
-      transform: translateY(6px) scale(0.97);
-      transition: opacity 0.18s ease, transform 0.18s ease;
-      max-width: 320px;
+      transform: translateY(8px) scale(0.96);
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      max-width: 290px;
     }
     #prime-tooltip.visible {
       opacity: 1;
       transform: translateY(0) scale(1);
-      pointer-events: auto;  /* allow clicking the upgrade link */
+      pointer-events: auto;
     }
 
     .prime-tooltip-inner {
-      background: #0f0f18;
-      border: 1px solid rgba(168,85,247,0.5);
-      border-radius: 10px;
-      padding: 14px 16px;
+      background: #0a0a14;
+      border: 1px solid rgba(168,85,247,0.55);
+      border-radius: 8px;
+      padding: 12px 14px;
       box-shadow:
-        0 0 0 1px rgba(168,85,247,0.08),
-        0 8px 40px rgba(0,0,0,0.8),
-        0 0 30px rgba(168,85,247,0.12),
-        inset 0 1px 0 rgba(168,85,247,0.1);
+        0 0 0 1px rgba(168,85,247,0.06),
+        0 8px 40px rgba(0,0,0,0.9),
+        0 0 28px rgba(168,85,247,0.15);
       position: relative;
     }
-
-    /* Arrow pointer at bottom of tooltip */
+    /* Arrow pointer */
     .prime-tooltip-inner::after {
       content: '';
       position: absolute;
-      bottom: -7px;
-      left: 50%;
-      transform: translateX(-50%) rotate(45deg);
-      width: 12px; height: 12px;
-      background: #0f0f18;
-      border-right: 1px solid rgba(168,85,247,0.5);
-      border-bottom: 1px solid rgba(168,85,247,0.5);
+      bottom: -6px; left: 20px;
+      width: 10px; height: 10px;
+      background: #0a0a14;
+      border-right: 1px solid rgba(168,85,247,0.55);
+      border-bottom: 1px solid rgba(168,85,247,0.55);
+      transform: rotate(45deg);
     }
 
-    .prime-tooltip-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
+    .prime-tooltip-hdr {
+      display: flex; align-items: center; gap: 7px;
+      margin-bottom: 7px;
     }
-
-    .prime-lock-icon {
-      width: 14px; height: 14px;
-      stroke: var(--purple);
-      fill: none;
-      stroke-width: 1.8;
-      flex-shrink: 0;
+    .prime-tooltip-hdr svg {
+      width: 13px; height: 13px;
+      fill: none; stroke: var(--purple);
+      stroke-width: 1.8; flex-shrink: 0;
     }
-
     .prime-tooltip-title {
       font-family: var(--font-head);
-      font-size: 9px;
+      font-size: 8px;
       font-weight: 700;
       letter-spacing: 2px;
       color: var(--purple);
-      text-shadow: 0 0 12px var(--purple-glow);
+      text-shadow: 0 0 10px var(--purple-glow);
     }
-
     .prime-tooltip-body {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-dim);
-      line-height: 1.65;
-      margin-bottom: 12px;
+      line-height: 1.6;
+      margin-bottom: 10px;
     }
-
     .prime-tooltip-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
       font-family: var(--font-head);
-      font-size: 9px;
-      font-weight: 700;
+      font-size: 8px; font-weight: 700;
       letter-spacing: 2px;
-      padding: 7px 14px;
+      padding: 7px 12px;
       background: linear-gradient(135deg, var(--purple-dim), var(--purple));
       color: #fff;
-      border-radius: 5px;
+      border-radius: 4px;
       text-decoration: none;
       cursor: pointer;
       transition: box-shadow var(--transition), transform var(--transition);
-      box-shadow: 0 0 16px var(--purple-glow);
-      width: 100%;
-      justify-content: center;
+      box-shadow: 0 0 14px var(--purple-glow);
     }
     .prime-tooltip-link:hover {
-      box-shadow: 0 0 28px var(--purple-glow);
+      box-shadow: 0 0 24px var(--purple-glow);
       transform: translateY(-1px);
     }
-
-    /* ── Toggle Switch ───────────────────────────────────────────────────── */
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 0;
-      border-bottom: 1px solid var(--border);
-      position: relative;
-    }
-    .toggle-row:last-child { border-bottom: none; }
-
-    .toggle-info { flex: 1; padding-right: 20px; }
-
-    .toggle-label {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text);
-      margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .toggle-desc {
-      font-size: 12px;
-      color: var(--text-muted);
-      line-height: 1.6;
-    }
-
-    .feature-pill {
-      font-family: var(--font-mono);
-      font-size: 8px;
-      letter-spacing: 1.2px;
-      padding: 2px 7px;
-      border-radius: 3px;
-      background: rgba(168,85,247,0.12);
-      border: 1px solid rgba(168,85,247,0.3);
-      color: var(--purple);
-      white-space: nowrap;
-    }
-
-    /* The actual toggle */
-    .toggle-switch-wrap {
-      position: relative;
-      flex-shrink: 0;
-    }
-
-    .toggle-switch {
-      position: relative;
-      display: inline-block;
-      width: 48px;
-      height: 26px;
-      cursor: pointer;
-    }
-    .toggle-switch input {
-      opacity: 0;
-      width: 0; height: 0;
-      position: absolute;
-    }
-    .toggle-track {
-      position: absolute;
-      inset: 0;
-      background: var(--surface-2);
-      border: 1px solid var(--border-bright);
-      border-radius: 26px;
-      transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
-    }
-    .toggle-thumb {
-      position: absolute;
-      top: 3px; left: 3px;
-      width: 18px; height: 18px;
-      background: var(--text-muted);
-      border-radius: 50%;
-      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), background 0.25s, box-shadow 0.25s;
-    }
-    .toggle-switch input:checked ~ .toggle-track {
-      background: rgba(168,85,247,0.2);
-      border-color: var(--purple-dim);
-      box-shadow: 0 0 12px var(--purple-glow);
-    }
-    .toggle-switch input:checked ~ .toggle-thumb {
-      transform: translateX(22px);
-      background: var(--purple);
-      box-shadow: 0 0 10px var(--purple-glow);
-    }
-    .toggle-switch input:disabled ~ .toggle-track { opacity: 0.3; }
-    .toggle-switch input:disabled ~ .toggle-thumb { opacity: 0.3; }
-
-    /* Lock treatment for premium toggle rows */
-    .toggle-row.locked {
-      cursor: not-allowed;
-    }
-    .toggle-row.locked .toggle-label,
-    .toggle-row.locked .toggle-desc {
-      opacity: 0.35;
-      filter: grayscale(0.8);
-    }
-    .toggle-row.locked .toggle-switch {
-      cursor: not-allowed;
-      pointer-events: none;
-    }
-
-    /* Lock icon inline with toggle */
-    .inline-lock {
-      width: 14px; height: 14px;
-      stroke: var(--text-muted);
-      fill: none;
-      stroke-width: 1.5;
-      flex-shrink: 0;
-      opacity: 0.5;
-    }
-
-    /* ── Upgrade CTA Banner ──────────────────────────────────────────────── */
-    .upgrade-banner {
-      position: relative;
-      background: linear-gradient(135deg, #0e0b18, #130f1f);
-      border: 1px solid rgba(168,85,247,0.25);
-      border-radius: var(--radius);
-      padding: 24px 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      overflow: hidden;
-      opacity: 0;
-      animation: cardSlideIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.32s forwards;
-    }
-    .upgrade-banner::before {
-      content: '';
-      position: absolute;
-      top: -50%; left: -20%;
-      width: 60%; height: 200%;
-      background: radial-gradient(ellipse, rgba(168,85,247,0.08) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .upgrade-banner-text { position: relative; }
-    .upgrade-banner-title {
-      font-family: var(--font-head);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      color: var(--purple);
-      text-shadow: 0 0 16px var(--purple-glow);
-      margin-bottom: 6px;
-    }
-    .upgrade-banner-desc {
-      font-size: 13px;
-      color: var(--text-muted);
-      line-height: 1.6;
-      max-width: 440px;
-    }
-    .upgrade-banner-btn {
-      position: relative;
-      flex-shrink: 0;
-      font-family: var(--font-head);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      padding: 12px 22px;
-      background: linear-gradient(135deg, var(--purple-dim), var(--purple));
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all var(--transition);
-      box-shadow: 0 0 20px var(--purple-glow);
-      white-space: nowrap;
-      text-decoration: none;
-      display: inline-block;
-      overflow: hidden;
-    }
-    .upgrade-banner-btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
-      transform: translateX(-100%);
-      transition: transform 0.5s;
-    }
-    .upgrade-banner-btn:hover::before { transform: translateX(100%); }
-    .upgrade-banner-btn:hover {
-      box-shadow: 0 0 36px var(--purple-glow), 0 6px 24px rgba(168,85,247,0.3);
-      transform: translateY(-2px);
-    }
-
-    /* ── Slot count display ──────────────────────────────────────────────── */
-    .slot-count-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 20px;
-      padding: 12px 16px;
-      background: var(--surface-3);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-    }
-    .slot-pips {
-      display: flex;
-      gap: 5px;
-    }
-    .slot-pip {
-      width: 20px; height: 6px;
-      border-radius: 3px;
-      background: var(--border-bright);
-      transition: background 0.3s, box-shadow 0.3s;
-    }
-    .slot-pip.active {
-      background: var(--purple);
-      box-shadow: 0 0 6px var(--purple-glow);
-    }
-    .slot-pip.locked-pip {
-      background: var(--border);
-      opacity: 0.4;
-    }
-    .slot-count-text {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-muted);
-      letter-spacing: 0.5px;
-    }
-    .slot-count-text strong { color: var(--purple); }
 
     /* ── Toast ───────────────────────────────────────────────────────────── */
     #toast {
       position: fixed;
-      bottom: 28px;
-      left: 50%;
-      transform: translateX(-50%) translateY(16px);
+      bottom: 20px; left: 50%;
+      transform: translateX(-50%) translateY(10px);
       background: var(--surface-2);
       border: 1px solid var(--border-bright);
-      border-radius: 8px;
-      padding: 12px 22px;
-      font-size: 12px;
+      border-radius: 5px;
+      padding: 10px 20px;
+      font-size: 11px;
       color: var(--text);
       font-family: var(--font-mono);
       letter-spacing: 0.5px;
       opacity: 0;
-      transition: opacity 0.28s, transform 0.28s;
-      z-index: 9999;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 9998;
       pointer-events: none;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.7);
-      white-space: nowrap;
     }
     #toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
     #toast.success { border-color: rgba(74,222,128,0.4); }
     #toast.error   { border-color: rgba(248,113,113,0.4); }
 
-    /* ── Scrollbar ───────────────────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--purple-dim); }
-
-    /* ── Responsive ──────────────────────────────────────────────────────── */
-    @media (max-width: 820px) {
-      .page { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
-      .sidebar {
-        grid-column: 1;
-        position: static;
-        height: auto;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-        padding: 16px 0;
-        display: flex;
-        gap: 4px;
-        overflow-x: auto;
-      }
-      .sidebar-section-label { display: none; }
-      .sidebar-nav { display: flex; }
-      .sidebar-divider { display: none; }
-      .nav-link { white-space: nowrap; }
-      .content { grid-column: 1; padding: 28px 20px 60px; }
-      .slots-grid { grid-template-columns: 1fr; }
-      .upgrade-banner { flex-direction: column; }
-    }
+    /* Locked cursor over full locked zone */
+    [data-locked="true"] { cursor: not-allowed !important; }
   </style>
 </head>
 <body>
 
-  <div class="grid-bg" aria-hidden="true"></div>
+  <!-- Background layers -->
+  <div class="tech-grid" aria-hidden="true"></div>
   <div class="scanlines" aria-hidden="true"></div>
+  <div class="outer-frame" aria-hidden="true"></div>
+  <div class="corner-dot tl" aria-hidden="true"></div>
+  <div class="corner-dot tr" aria-hidden="true"></div>
+  <div class="corner-dot bl" aria-hidden="true"></div>
+  <div class="corner-dot br" aria-hidden="true"></div>
 
-  <!-- ── Prime Protocol Tooltip (singleton, JS-positioned) ─────────────── -->
+  <!-- ── Prime Tooltip ─────────────────────────────────────────────────── -->
   <div id="prime-tooltip" role="tooltip" aria-live="polite">
     <div class="prime-tooltip-inner">
-      <div class="prime-tooltip-header">
-        <svg class="prime-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="3" y="11" width="18" height="11" rx="2"/>
-          <path d="M7 11V7a5 5 0 0110 0v4"/>
-        </svg>
+      <div class="prime-tooltip-hdr">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
         <span class="prime-tooltip-title">PRIME PROTOCOL LOCKED</span>
       </div>
       <p class="prime-tooltip-body">
         You need to purchase a <strong style="color:var(--purple)">Pro</strong> or <strong style="color:var(--gold)">Legend</strong> plan to unlock this system matrix.
       </p>
-      <a class="prime-tooltip-link" id="tooltip-upgrade-link" href="premium.html" target="_blank">
-        ⚡ UNLOCK NOW — VIEW PLANS
+      <a class="prime-tooltip-link" href="../premium/premium.html" id="tooltip-upgrade-link">
+        ⚡ UNLOCK — VIEW PLANS
       </a>
     </div>
   </div>
 
-  <!-- ── Page Shell ─────────────────────────────────────────────────────── -->
+  <!-- ── Page ───────────────────────────────────────────────────────────── -->
   <div class="page">
 
-    <!-- ── Top Nav ─────────────────────────────────────────────────────── -->
-    <nav class="topbar">
-      <span class="topbar-logo">MOUSSY</span>
-      <div class="topbar-right">
-        <div class="plan-chip free" id="plan-chip">
-          <span class="chip-dot"></span>
-          <span id="plan-chip-label">FREE ENGINE</span>
+    <!-- ── Top Bar ──────────────────────────────────────────────────────── -->
+    <nav class="topbar" aria-label="MOUSSY settings header">
+      <div class="topbar-left">
+        <!-- Logo Badge -->
+        <div class="logo-badge">
+          <!-- Decepticon-style SVG logo -->
+          <svg class="decepticon-svg" viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="MOUSSY logo">
+            <!-- Main face plate -->
+            <polygon points="30,2 56,16 56,44 30,62 4,44 4,16" fill="url(#deceptGrad)" stroke="rgba(168,85,247,0.6)" stroke-width="1"/>
+            <!-- Inner dark plate -->
+            <polygon points="30,10 48,20 48,40 30,54 12,40 12,20" fill="rgba(5,5,8,0.8)" stroke="rgba(168,85,247,0.3)" stroke-width="0.8"/>
+            <!-- Crown spikes top -->
+            <polygon points="30,2 24,12 30,10" fill="#a855f7" opacity="0.9"/>
+            <polygon points="30,2 36,12 30,10" fill="#7c3aed" opacity="0.9"/>
+            <polygon points="16,8 12,20 20,18" fill="#a855f7" opacity="0.7"/>
+            <polygon points="44,8 48,20 40,18" fill="#7c3aed" opacity="0.7"/>
+            <!-- Eyes -->
+            <ellipse cx="22" cy="28" rx="5" ry="3" fill="#a855f7" opacity="0.95"/>
+            <ellipse cx="38" cy="28" rx="5" ry="3" fill="#a855f7" opacity="0.95"/>
+            <ellipse cx="22" cy="28" rx="2.5" ry="1.5" fill="#e9d5ff"/>
+            <ellipse cx="38" cy="28" rx="2.5" ry="1.5" fill="#e9d5ff"/>
+            <!-- Eye glow -->
+            <ellipse cx="22" cy="28" rx="5" ry="3" fill="#a855f7" opacity="0.3" filter="url(#eyeGlow)"/>
+            <ellipse cx="38" cy="28" rx="5" ry="3" fill="#a855f7" opacity="0.3" filter="url(#eyeGlow)"/>
+            <!-- Face lines -->
+            <line x1="12" y1="34" x2="24" y2="36" stroke="rgba(168,85,247,0.5)" stroke-width="0.8"/>
+            <line x1="48" y1="34" x2="36" y2="36" stroke="rgba(168,85,247,0.5)" stroke-width="0.8"/>
+            <!-- Chin notch -->
+            <polygon points="30,54 24,46 30,50 36,46" fill="#a855f7" opacity="0.6"/>
+            <!-- Center mark -->
+            <polygon points="30,34 27,38 30,42 33,38" fill="rgba(168,85,247,0.5)" stroke="rgba(168,85,247,0.4)" stroke-width="0.5"/>
+            <defs>
+              <linearGradient id="deceptGrad" x1="30" y1="0" x2="30" y2="68" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#1a1a2e"/>
+                <stop offset="50%" stop-color="#0d0d18"/>
+                <stop offset="100%" stop-color="#050508"/>
+              </linearGradient>
+              <filter id="eyeGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="2" result="blur"/>
+              </filter>
+            </defs>
+          </svg>
+          <div class="brand-text">
+            <span class="brand-name">MOUSSY</span>
+            <span class="brand-sub">CONTROL. POWER. PRECISION.</span>
+          </div>
         </div>
-        <button class="topbar-save-btn" id="save-btn" aria-label="Save settings">
-          SAVE CONFIG
-        </button>
+
+        <!-- Title -->
+        <div class="topbar-title-block">
+          <div class="topbar-title">SETTINGS DASHBOARD</div>
+          <div class="topbar-subtitle">Configure your control protocols</div>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <button class="topbar-ctrl-btn" id="save-btn" title="Save configuration" aria-label="Save settings">SAVE</button>
+        <button class="topbar-ctrl-btn" title="Minimize" aria-label="Minimize">—</button>
+        <button class="topbar-ctrl-btn close" title="Close" aria-label="Close" onclick="window.close()">✕</button>
       </div>
     </nav>
 
-    <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+    <!-- ── Sidebar ───────────────────────────────────────────────────────── -->
     <aside class="sidebar" aria-label="Settings navigation">
-      <p class="sidebar-section-label">CONFIG MATRIX</p>
-      <ul class="sidebar-nav" role="list">
-        <li>
-          <a class="nav-link active" href="#gesture-slots" id="nav-gestures">
-            <i class="nav-icon">⌖</i> Gesture Slots
-          </a>
-        </li>
-        <li>
-          <a class="nav-link" href="#premium-toggles" id="nav-premium">
-            <i class="nav-icon">◈</i> Premium Features
-          </a>
-        </li>
-      </ul>
-      <div class="sidebar-divider"></div>
-      <p class="sidebar-section-label">NAVIGATION</p>
-      <ul class="sidebar-nav" role="list">
-        <li>
-          <a class="nav-link" href="premium.html" target="_blank" id="nav-upgrade">
-            <i class="nav-icon">⚡</i> Upgrade Plan
-          </a>
-        </li>
-        <li>
-          <a class="nav-link" href="popup/popup.html" id="nav-popup">
-            <i class="nav-icon">◧</i> Popup Config
-          </a>
-        </li>
-      </ul>
+
+      <!-- Dashboard -->
+      <a class="nav-item active" href="#" id="nav-dashboard" aria-current="page">
+        <div class="nav-icon-wrap">
+          <!-- Dashboard / grid icon -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="3" width="8" height="8" rx="1"/>
+            <rect x="13" y="3" width="8" height="8" rx="1"/>
+            <rect x="3" y="13" width="8" height="8" rx="1"/>
+            <rect x="13" y="13" width="8" height="8" rx="1"/>
+          </svg>
+        </div>
+        <span class="nav-label">DASHBOARD</span>
+      </a>
+
+      <!-- Protocols -->
+      <a class="nav-item" href="#" id="nav-protocols">
+        <div class="nav-icon-wrap">
+          <!-- Gesture/protocol icon -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/>
+            <line x1="12" y1="3" x2="12" y2="8"/>
+            <line x1="12" y1="16" x2="12" y2="21"/>
+            <line x1="3" y1="12" x2="8" y2="12"/>
+            <line x1="16" y1="12" x2="21" y2="12"/>
+            <circle cx="12" cy="12" r="2"/>
+          </svg>
+        </div>
+        <span class="nav-label">PROTOCOLS</span>
+      </a>
+
+      <!-- Appearance -->
+      <a class="nav-item" href="#" id="nav-appearance">
+        <div class="nav-icon-wrap">
+          <!-- Palette icon -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.1 0 2-.9 2-2 0-.52-.2-1-.52-1.36-.32-.35-.52-.83-.52-1.34 0-1.1.9-2 2-2h2.36c3.1 0 5.64-2.54 5.64-5.64C22.96 6.2 17.92 2 12 2z"/>
+            <circle cx="7" cy="12" r="1.5"/>
+            <circle cx="9.5" cy="7.5" r="1.5"/>
+            <circle cx="14.5" cy="7.5" r="1.5"/>
+          </svg>
+        </div>
+        <span class="nav-label">APPEARANCE</span>
+      </a>
+
+      <div class="sidebar-divider" aria-hidden="true"></div>
+
+      <!-- Audio -->
+      <a class="nav-item" href="#" id="nav-audio">
+        <div class="nav-icon-wrap">
+          <!-- Speaker/audio icon -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 010 7.07"/>
+            <path d="M19.07 4.93a10 10 0 010 14.14"/>
+          </svg>
+        </div>
+        <span class="nav-label">AUDIO</span>
+      </a>
+
+      <!-- Advanced -->
+      <a class="nav-item" href="#" id="nav-advanced">
+        <div class="nav-icon-wrap">
+          <!-- Gear/settings icon -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+        </div>
+        <span class="nav-label">ADVANCED</span>
+      </a>
+
+      <div class="sidebar-divider" aria-hidden="true"></div>
+
+      <!-- About -->
+      <a class="nav-item" href="#" id="nav-about">
+        <div class="nav-icon-wrap">
+          <!-- Info icon -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+        </div>
+        <span class="nav-label">ABOUT</span>
+      </a>
+
     </aside>
 
-    <!-- ── Main Content ─────────────────────────────────────────────────── -->
-    <main class="content" id="main-content">
+    <!-- ── Main Content ───────────────────────────────────────────────────── -->
+    <main class="content" id="main-content" aria-label="Settings content">
 
-      <!-- ── Section: Gesture Slots ────────────────────────────────────── -->
-      <section id="gesture-slots" aria-labelledby="gesture-slots-title">
-        <div class="section-header">
-          <div class="section-title-group">
-            <div class="section-eyebrow">GESTURE MAP</div>
-            <h1 class="section-title" id="gesture-slots-title">Custom Site Slots</h1>
-            <p class="section-desc">
-              Bind a mouse gesture pattern to any URL. Right-click drag the pattern, release to navigate.
-              Slot 1 and 2 are available on the Free Engine tier.
-            </p>
+      <!-- ─────────────────────────────────────────────────────────────────── -->
+      <!-- SECTION 1: System Operation & Gesture Modes                         -->
+      <!-- ─────────────────────────────────────────────────────────────────── -->
+      <section class="section-block" id="section-gesture-modes" aria-labelledby="s1-title">
+        <div class="section-title-bar">
+          <div class="section-title-left">
+            <div class="section-num">1</div>
+            <h2 class="section-name" id="s1-title">SYSTEM OPERATION &amp; GESTURE MODES</h2>
           </div>
         </div>
 
-        <div class="module-card" id="slots-module">
-          <div class="module-header">
-            <div class="module-title-group">
-              <div class="module-icon" aria-hidden="true">⌖</div>
+        <div class="gesture-cards-row">
+          <!-- ── Card 1: OMNI-CLOCK MODE ── -->
+          <div class="gesture-card selected" id="card-omni" role="radio" aria-checked="true" tabindex="0" onclick="selectGesture('omni')">
+            <div class="gesture-card-top">
+              <div class="gesture-radio" id="radio-omni"></div>
               <div>
-                <div class="module-title">GESTURE BINDING MATRIX</div>
-                <div class="module-subtitle">Gesture stroke → destination URL</div>
+                <div class="gesture-card-title">OMNI-CLOCK MODE<br><span style="opacity:0.7">(BEN 10 WATCH STYLE)</span></div>
+                <div class="gesture-card-sub" style="margin-top:3px"></div>
               </div>
             </div>
-            <span class="module-badge badge-free">FREE: 2 SLOTS</span>
+
+            <!-- Omni-Clock HUD SVG Graphic -->
+            <div class="omni-clock-graphic">
+              <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Omni-Clock HUD preview">
+                <defs>
+                  <radialGradient id="hudGrad" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="rgba(168,85,247,0.15)"/>
+                    <stop offset="100%" stop-color="rgba(168,85,247,0)"/>
+                  </radialGradient>
+                  <filter id="glow1">
+                    <feGaussianBlur stdDeviation="1.5" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                  <filter id="glow2">
+                    <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                </defs>
+
+                <!-- Background fill -->
+                <circle cx="60" cy="60" r="55" fill="url(#hudGrad)"/>
+
+                <!-- Outer ring rotating with dashes -->
+                <circle class="ring-spin" cx="60" cy="60" r="52"
+                  stroke="rgba(168,85,247,0.5)" stroke-width="1"
+                  stroke-dasharray="8 4" fill="none"/>
+
+                <!-- Tick marks ring -->
+                <circle class="ring-spin-rev" cx="60" cy="60" r="46"
+                  stroke="rgba(168,85,247,0.25)" stroke-width="0.5"
+                  stroke-dasharray="2 8" fill="none"/>
+
+                <!-- Main circle border -->
+                <circle cx="60" cy="60" r="42"
+                  stroke="rgba(168,85,247,0.8)" stroke-width="1.5" fill="none"
+                  filter="url(#glow1)"/>
+
+                <!-- Inner decorative ring -->
+                <circle cx="60" cy="60" r="36"
+                  stroke="rgba(168,85,247,0.3)" stroke-width="0.8" fill="none"
+                  stroke-dasharray="3 3"/>
+
+                <!-- Center background -->
+                <circle cx="60" cy="60" r="16" fill="rgba(10,10,20,0.8)"
+                  stroke="rgba(168,85,247,0.4)" stroke-width="1"/>
+
+                <!-- Cursor arrow in center -->
+                <g class="cursor-pulse" filter="url(#glow2)">
+                  <!-- Arrow cursor -->
+                  <path d="M57 53 L57 67 L60 64 L62 68 L64 67 L62 63 L66 63 Z"
+                    fill="white" stroke="rgba(168,85,247,0.8)" stroke-width="0.8"/>
+                </g>
+
+                <!-- UP arrow -->
+                <g filter="url(#glow1)">
+                  <polyline points="60,12 55,20 65,20" fill="rgba(168,85,247,0.7)" stroke="none"/>
+                  <polyline points="60,18 55,26 65,26" fill="rgba(168,85,247,0.4)" stroke="none"/>
+                </g>
+
+                <!-- DOWN arrow -->
+                <g filter="url(#glow1)">
+                  <polyline points="60,108 55,100 65,100" fill="rgba(168,85,247,0.7)" stroke="none"/>
+                  <polyline points="60,102 55,94 65,94" fill="rgba(168,85,247,0.4)" stroke="none"/>
+                </g>
+
+                <!-- LEFT arrow -->
+                <g filter="url(#glow1)">
+                  <polyline points="12,60 20,55 20,65" fill="rgba(168,85,247,0.7)" stroke="none"/>
+                  <polyline points="18,60 26,55 26,65" fill="rgba(168,85,247,0.4)" stroke="none"/>
+                </g>
+
+                <!-- RIGHT arrow -->
+                <g filter="url(#glow1)">
+                  <polyline points="108,60 100,55 100,65" fill="rgba(168,85,247,0.7)" stroke="none"/>
+                  <polyline points="102,60 94,55 94,65" fill="rgba(168,85,247,0.4)" stroke="none"/>
+                </g>
+
+                <!-- Globe icon - bottom left -->
+                <g transform="translate(20,74)" filter="url(#glow1)">
+                  <circle cx="8" cy="8" r="7" stroke="rgba(168,85,247,0.8)" stroke-width="1" fill="none"/>
+                  <ellipse cx="8" cy="8" rx="3" ry="7" stroke="rgba(168,85,247,0.5)" stroke-width="0.7" fill="none"/>
+                  <line x1="1" y1="8" x2="15" y2="8" stroke="rgba(168,85,247,0.5)" stroke-width="0.7"/>
+                </g>
+
+                <!-- Star icon - top left -->
+                <g transform="translate(16,38)" filter="url(#glow1)">
+                  <path d="M8 2 L9.8 6.5 L14.5 6.5 L10.8 9.5 L12.2 14 L8 11.2 L3.8 14 L5.2 9.5 L1.5 6.5 L6.2 6.5 Z"
+                    fill="none" stroke="rgba(168,85,247,0.7)" stroke-width="0.8"/>
+                </g>
+
+                <!-- Target reticle - right middle -->
+                <g transform="translate(88,52)" filter="url(#glow1)">
+                  <circle cx="8" cy="8" r="7" stroke="rgba(168,85,247,0.6)" stroke-width="0.8" fill="none"/>
+                  <circle cx="8" cy="8" r="3" stroke="rgba(168,85,247,0.8)" stroke-width="0.8" fill="none"/>
+                  <line x1="8" y1="1" x2="8" y2="4" stroke="rgba(168,85,247,0.7)" stroke-width="0.8"/>
+                  <line x1="8" y1="12" x2="8" y2="15" stroke="rgba(168,85,247,0.7)" stroke-width="0.8"/>
+                  <line x1="1" y1="8" x2="4" y2="8" stroke="rgba(168,85,247,0.7)" stroke-width="0.8"/>
+                  <line x1="12" y1="8" x2="15" y2="8" stroke="rgba(168,85,247,0.7)" stroke-width="0.8"/>
+                </g>
+
+                <!-- Dividing lines between sectors -->
+                <line x1="60" y1="18" x2="60" y2="42" stroke="rgba(168,85,247,0.2)" stroke-width="0.5" stroke-dasharray="2 2"/>
+                <line x1="60" y1="78" x2="60" y2="102" stroke="rgba(168,85,247,0.2)" stroke-width="0.5" stroke-dasharray="2 2"/>
+                <line x1="18" y1="60" x2="42" y2="60" stroke="rgba(168,85,247,0.2)" stroke-width="0.5" stroke-dasharray="2 2"/>
+                <line x1="78" y1="60" x2="102" y2="60" stroke="rgba(168,85,247,0.2)" stroke-width="0.5" stroke-dasharray="2 2"/>
+
+              </svg>
+            </div>
+
+            <p class="gesture-card-desc">
+              Triggers a high-tech magical visual circle HUD directly around your cursor during stroke execution.
+            </p>
           </div>
 
-          <div class="module-body">
-            <!-- Slot usage bar -->
-            <div class="slot-count-bar" id="slot-count-bar" aria-label="Slot usage">
-              <div class="slot-pips" id="slot-pips" aria-hidden="true">
-                <div class="slot-pip active" data-index="0"></div>
-                <div class="slot-pip" data-index="1"></div>
-                <div class="slot-pip locked-pip" data-index="2"></div>
-                <div class="slot-pip locked-pip" data-index="3"></div>
-                <div class="slot-pip locked-pip" data-index="4"></div>
-                <div class="slot-pip locked-pip" data-index="5"></div>
+          <!-- ── Card 2: FREE-HAND MATRIX ── -->
+          <div class="gesture-card" id="card-freehand" role="radio" aria-checked="false" tabindex="0" onclick="selectGesture('freehand')">
+            <div class="gesture-card-top">
+              <div class="gesture-radio" id="radio-freehand"></div>
+              <div>
+                <div class="gesture-card-title">FREE-HAND MATRIX<br><span style="opacity:0.7">(PEN DRAWING STYLE)</span></div>
               </div>
-              <span class="slot-count-text">
-                <strong id="slot-used-count">0</strong> / <span id="slot-total-count">2</span> slots configured
-              </span>
             </div>
 
-            <!-- 6 slots grid -->
-            <div class="slots-grid" id="slots-grid" role="list">
+            <!-- Freehand neon trail graphic -->
+            <div class="freehand-graphic">
+              <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Free-hand trail preview">
+                <defs>
+                  <filter id="trailGlow">
+                    <feGaussianBlur stdDeviation="2" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                  <linearGradient id="trailGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#a855f7" stop-opacity="0.1"/>
+                    <stop offset="50%" stop-color="#a855f7" stop-opacity="0.8"/>
+                    <stop offset="100%" stop-color="#c084fc" stop-opacity="1"/>
+                  </linearGradient>
+                </defs>
 
-              <!-- SLOT 1 — FREE -->
-              <div class="slot-item" data-slot="1" role="listitem">
-                <div class="slot-header">
-                  <span class="slot-number">SLOT 01</span>
-                  <div class="slot-status-dot" aria-hidden="true"></div>
-                </div>
-                <select class="slot-gesture-select" id="slot-1-gesture" aria-label="Slot 1 gesture type">
-                  <option value="">— SELECT GESTURE —</option>
-                  <option value="swipe-right">→ SWIPE RIGHT</option>
-                  <option value="swipe-left">← SWIPE LEFT</option>
-                  <option value="swipe-up">↑ SWIPE UP</option>
-                  <option value="swipe-down">↓ SWIPE DOWN</option>
-                  <option value="l-down-right">L SHAPE (↓→)</option>
-                  <option value="l-down-left">L SHAPE (↓←)</option>
-                  <option value="l-up-right">L SHAPE (↑→)</option>
-                  <option value="l-up-left">L SHAPE (↑←)</option>
-                </select>
-                <input
-                  class="slot-url-input"
-                  id="slot-1-url"
-                  type="url"
-                  placeholder="https://example.com"
-                  aria-label="Slot 1 destination URL"
-                  autocomplete="off"
-                />
-              </div>
+                <!-- Faded trail start -->
+                <path d="M 25 85 Q 30 60 40 50 Q 55 35 60 45 Q 65 55 72 42 Q 82 25 88 35"
+                  stroke="url(#trailGrad)" stroke-width="3"
+                  stroke-linecap="round" stroke-linejoin="round"
+                  fill="none" filter="url(#trailGlow)"
+                  class="trail-path"/>
 
-              <!-- SLOT 2 — FREE -->
-              <div class="slot-item" data-slot="2" role="listitem">
-                <div class="slot-header">
-                  <span class="slot-number">SLOT 02</span>
-                  <div class="slot-status-dot" aria-hidden="true"></div>
-                </div>
-                <select class="slot-gesture-select" id="slot-2-gesture" aria-label="Slot 2 gesture type">
-                  <option value="">— SELECT GESTURE —</option>
-                  <option value="swipe-right">→ SWIPE RIGHT</option>
-                  <option value="swipe-left">← SWIPE LEFT</option>
-                  <option value="swipe-up">↑ SWIPE UP</option>
-                  <option value="swipe-down">↓ SWIPE DOWN</option>
-                  <option value="l-down-right">L SHAPE (↓→)</option>
-                  <option value="l-down-left">L SHAPE (↓←)</option>
-                  <option value="l-up-right">L SHAPE (↑→)</option>
-                  <option value="l-up-left">L SHAPE (↑←)</option>
-                </select>
-                <input
-                  class="slot-url-input"
-                  id="slot-2-url"
-                  type="url"
-                  placeholder="https://example.com"
-                  aria-label="Slot 2 destination URL"
-                  autocomplete="off"
-                />
-              </div>
+                <!-- Bright end of trail -->
+                <path d="M 72 42 Q 82 25 88 35"
+                  stroke="#c084fc" stroke-width="4"
+                  stroke-linecap="round"
+                  fill="none" filter="url(#trailGlow)"
+                  opacity="0.9"/>
 
-              <!-- SLOT 3 — LOCKED -->
-              <div class="slot-item locked" data-slot="3" data-locked="true" role="listitem" aria-label="Slot 3 — Premium locked">
-                <div class="slot-header">
-                  <span class="slot-number">SLOT 03</span>
-                  <div class="slot-status-dot" aria-hidden="true"></div>
-                </div>
-                <select class="slot-gesture-select" id="slot-3-gesture" aria-hidden="true" tabindex="-1" disabled>
-                  <option value="">— SELECT GESTURE —</option>
-                </select>
-                <input class="slot-url-input" id="slot-3-url" type="url" placeholder="https://example.com" aria-hidden="true" tabindex="-1" disabled />
-                <!-- Lock overlay -->
-                <div class="lock-overlay" aria-hidden="true">
-                  <div class="lock-icon-wrap">
-                    <svg class="lock-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                  </div>
-                  <span class="lock-label">PRO ONLY</span>
-                </div>
-              </div>
+                <!-- Glowing dots along trail -->
+                <circle cx="40" cy="50" r="2.5" fill="#a855f7" opacity="0.6" filter="url(#trailGlow)"/>
+                <circle cx="60" cy="45" r="2" fill="#a855f7" opacity="0.5" filter="url(#trailGlow)"/>
+                <circle cx="72" cy="42" r="2.5" fill="#c084fc" opacity="0.7" filter="url(#trailGlow)"/>
 
-              <!-- SLOT 4 — LOCKED -->
-              <div class="slot-item locked" data-slot="4" data-locked="true" role="listitem" aria-label="Slot 4 — Premium locked">
-                <div class="slot-header">
-                  <span class="slot-number">SLOT 04</span>
-                  <div class="slot-status-dot" aria-hidden="true"></div>
-                </div>
-                <select class="slot-gesture-select" id="slot-4-gesture" aria-hidden="true" tabindex="-1" disabled>
-                  <option value="">— SELECT GESTURE —</option>
-                </select>
-                <input class="slot-url-input" id="slot-4-url" type="url" placeholder="https://example.com" aria-hidden="true" tabindex="-1" disabled />
-                <div class="lock-overlay" aria-hidden="true">
-                  <div class="lock-icon-wrap">
-                    <svg class="lock-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                  </div>
-                  <span class="lock-label">PRO ONLY</span>
-                </div>
-              </div>
+                <!-- End bright dot -->
+                <circle cx="88" cy="35" r="3.5" fill="#c084fc" filter="url(#trailGlow)"/>
+                <circle cx="88" cy="35" r="6" fill="#a855f7" opacity="0.2" filter="url(#trailGlow)"/>
 
-              <!-- SLOT 5 — LOCKED -->
-              <div class="slot-item locked" data-slot="5" data-locked="true" role="listitem" aria-label="Slot 5 — Premium locked">
-                <div class="slot-header">
-                  <span class="slot-number">SLOT 05</span>
-                  <div class="slot-status-dot" aria-hidden="true"></div>
-                </div>
-                <select class="slot-gesture-select" id="slot-5-gesture" aria-hidden="true" tabindex="-1" disabled>
-                  <option value="">— SELECT GESTURE —</option>
-                </select>
-                <input class="slot-url-input" id="slot-5-url" type="url" placeholder="https://example.com" aria-hidden="true" tabindex="-1" disabled />
-                <div class="lock-overlay" aria-hidden="true">
-                  <div class="lock-icon-wrap">
-                    <svg class="lock-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                  </div>
-                  <span class="lock-label">PRO ONLY</span>
-                </div>
-              </div>
+                <!-- Cursor arrow at end - floating animation -->
+                <g class="cursor-float">
+                  <!-- White cursor arrow shape -->
+                  <path d="M78,70 L78,84 L81,81 L83,85 L85,84 L83,80 L87,80 Z"
+                    fill="white" opacity="0.9" stroke="rgba(168,85,247,0.7)" stroke-width="0.5"/>
+                </g>
 
-              <!-- SLOT 6 — LOCKED -->
-              <div class="slot-item locked" data-slot="6" data-locked="true" role="listitem" aria-label="Slot 6 — Premium locked">
-                <div class="slot-header">
-                  <span class="slot-number">SLOT 06</span>
-                  <div class="slot-status-dot" aria-hidden="true"></div>
-                </div>
-                <select class="slot-gesture-select" id="slot-6-gesture" aria-hidden="true" tabindex="-1" disabled>
-                  <option value="">— SELECT GESTURE —</option>
-                </select>
-                <input class="slot-url-input" id="slot-6-url" type="url" placeholder="https://example.com" aria-hidden="true" tabindex="-1" disabled />
-                <div class="lock-overlay" aria-hidden="true">
-                  <div class="lock-icon-wrap">
-                    <svg class="lock-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                  </div>
-                  <span class="lock-label">PRO ONLY</span>
-                </div>
-              </div>
+                <!-- Sparse grid dots in background -->
+                <circle cx="20" cy="30" r="1" fill="rgba(168,85,247,0.15)"/>
+                <circle cx="40" cy="20" r="1" fill="rgba(168,85,247,0.15)"/>
+                <circle cx="80" cy="20" r="1" fill="rgba(168,85,247,0.15)"/>
+                <circle cx="100" cy="40" r="1" fill="rgba(168,85,247,0.15)"/>
+                <circle cx="20" cy="100" r="1" fill="rgba(168,85,247,0.1)"/>
+                <circle cx="100" cy="90" r="1" fill="rgba(168,85,247,0.1)"/>
+              </svg>
+            </div>
 
-            </div><!-- /.slots-grid -->
-          </div><!-- /.module-body -->
-        </div><!-- /.module-card -->
+            <p class="gesture-card-desc">
+              Provides a raw, kinetic glowing trail map following your custom drawing paths.
+            </p>
+          </div>
+        </div>
       </section>
 
-      <!-- ── Section: Premium Toggles ─────────────────────────────────── -->
-      <section id="premium-toggles" aria-labelledby="premium-toggles-title" style="margin-top: 48px;">
-        <div class="section-header" style="animation-delay: 0.10s;">
-          <div class="section-title-group">
-            <div class="section-eyebrow">PRIME FEATURES</div>
-            <h2 class="section-title" id="premium-toggles-title">System Modules</h2>
-            <p class="section-desc">
-              Advanced overlay and audio systems. Requires Monthly Pass or Legend access to activate.
-            </p>
+
+      <!-- ─────────────────────────────────────────────────────────────────── -->
+      <!-- SECTION 2: Core Allocation Matrix (FREE SLOTS)                      -->
+      <!-- ─────────────────────────────────────────────────────────────────── -->
+      <section class="section-block" id="section-allocation" aria-labelledby="s2-title">
+        <div class="section-title-bar">
+          <div class="section-title-left">
+            <div class="section-num">2</div>
+            <h2 class="section-name" id="s2-title">CORE ALLOCATION MATRIX (FREE SLOTS)</h2>
           </div>
         </div>
 
-        <div class="module-card" style="animation-delay: 0.18s;" id="toggles-module">
-          <div class="module-header">
-            <div class="module-title-group">
-              <div class="module-icon" aria-hidden="true">◈</div>
-              <div>
-                <div class="module-title">PREMIUM CONFIGURATION</div>
-                <div class="module-subtitle">Locked modules — upgrade to enable</div>
-              </div>
+        <div class="alloc-rows">
+
+          <!-- SLOT 1 -->
+          <div class="slot-row" id="slot-1-row">
+            <span class="slot-label">SLOT 1</span>
+
+            <!-- Gesture icon -->
+            <div class="gesture-icon-box" title="Swipe Left gesture">
+              <svg viewBox="0 0 28 18" aria-label="Mouse swipe left">
+                <!-- Mouse body -->
+                <rect x="8" y="1" width="12" height="16" rx="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+                <line x1="14" y1="1" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
+                <!-- Arrow left -->
+                <polyline points="4,9 1,9" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
+                <polyline points="1,9 3,7" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
+                <polyline points="1,9 3,11" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <span>SWIPE LEFT</span>
             </div>
-            <span class="module-badge badge-prime">PRIME ONLY</span>
+
+            <!-- Favicon box — Wikipedia W -->
+            <div class="favicon-box" id="favicon-1" title="Wikipedia favicon">
+              <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">
+                <circle cx="16" cy="16" r="15" fill="#fff"/>
+                <text x="16" y="22" text-anchor="middle" font-family="serif" font-size="18" font-weight="bold" fill="#333">W</text>
+              </svg>
+            </div>
+
+            <!-- URL Input -->
+            <div class="url-input-wrap">
+              <input
+                class="url-input"
+                id="slot-1-url"
+                type="url"
+                value="https://wikipedia.org"
+                placeholder="https://your-link.com"
+                aria-label="Slot 1 destination URL"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+
+            <!-- Actions -->
+            <div class="slot-actions">
+              <button class="slot-action-btn" title="Edit slot 1" aria-label="Edit slot 1">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="slot-action-btn delete" title="Delete slot 1" aria-label="Delete slot 1">
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              </button>
+            </div>
           </div>
 
-          <div class="module-body">
+          <!-- SLOT 2 -->
+          <div class="slot-row" id="slot-2-row">
+            <span class="slot-label">SLOT 2</span>
 
-            <!-- Toggle 1: HUD Clock -->
-            <div class="toggle-row locked" id="toggle-hud" data-locked="true" role="group" aria-label="HUD Clock toggle — premium locked">
-              <div class="toggle-info">
-                <div class="toggle-label">
-                  Center HUD Clock Display
-                  <svg class="inline-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                  <span class="feature-pill">PRIME</span>
-                </div>
-                <p class="toggle-desc">
-                  Renders a glowing real-time clock HUD at the center of the active tab.
-                  Activated via a dedicated gesture stroke.
-                </p>
-              </div>
-              <div class="toggle-switch-wrap">
-                <label class="toggle-switch" aria-label="Enable HUD Clock">
-                  <input type="checkbox" id="toggle-hud-input" disabled aria-disabled="true" />
-                  <div class="toggle-track"></div>
-                  <div class="toggle-thumb"></div>
-                </label>
-              </div>
+            <!-- Gesture icon -->
+            <div class="gesture-icon-box" title="Swipe Right gesture">
+              <svg viewBox="0 0 28 18" aria-label="Mouse swipe right">
+                <rect x="8" y="1" width="12" height="16" rx="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+                <line x1="14" y1="1" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
+                <polyline points="24,9 27,9" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
+                <polyline points="27,9 25,7" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
+                <polyline points="27,9 25,11" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <span>SWIPE RIGHT</span>
             </div>
 
-            <!-- Toggle 2: Sound Pack -->
-            <div class="toggle-row locked" id="toggle-sound" data-locked="true" role="group" aria-label="Sound Pack toggle — premium locked">
-              <div class="toggle-info">
-                <div class="toggle-label">
-                  Metallic Weapon Sound Feedback Pack
-                  <svg class="inline-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                  <span class="feature-pill">PRIME</span>
-                </div>
-                <p class="toggle-desc">
-                  High-fidelity cyberpunk weapon click and mechanical audio cues
-                  triggered on each gesture recognition event via offscreen audio engine.
-                </p>
-              </div>
-              <div class="toggle-switch-wrap">
-                <label class="toggle-switch" aria-label="Enable Sound Pack">
-                  <input type="checkbox" id="toggle-sound-input" disabled aria-disabled="true" />
-                  <div class="toggle-track"></div>
-                  <div class="toggle-thumb"></div>
-                </label>
-              </div>
+            <!-- Favicon box — YouTube play -->
+            <div class="favicon-box" id="favicon-2" title="YouTube favicon">
+              <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">
+                <rect width="32" height="32" rx="6" fill="#FF0000"/>
+                <polygon points="13,10 13,22 22,16" fill="white"/>
+              </svg>
             </div>
 
-          </div><!-- /.module-body -->
-        </div><!-- /.module-card -->
+            <!-- URL Input -->
+            <div class="url-input-wrap">
+              <input
+                class="url-input"
+                id="slot-2-url"
+                type="url"
+                value="https://youtube.com"
+                placeholder="https://your-link.com"
+                aria-label="Slot 2 destination URL"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
 
-        <!-- ── Upgrade Banner ────────────────────────────────────────── -->
-        <div class="upgrade-banner" id="upgrade-banner">
-          <div class="upgrade-banner-text">
-            <div class="upgrade-banner-title">⚡ PRIME PROTOCOL AVAILABLE</div>
-            <p class="upgrade-banner-desc">
-              Unlock all 6 gesture slots, HUD overlay, and sound packs.
-              Monthly Pass from <strong style="color:var(--purple)">$3.99/mo</strong> or grab the Legend Plan for a one-time <strong style="color:var(--gold)">$29.99</strong>.
-            </p>
+            <!-- Actions -->
+            <div class="slot-actions">
+              <button class="slot-action-btn" title="Edit slot 2" aria-label="Edit slot 2">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="slot-action-btn delete" title="Delete slot 2" aria-label="Delete slot 2">
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              </button>
+            </div>
           </div>
-          <a class="upgrade-banner-btn" href="premium.html" target="_blank" id="banner-upgrade-link">
-            VIEW PLANS →
+
+        </div>
+      </section>
+
+
+      <!-- ─────────────────────────────────────────────────────────────────── -->
+      <!-- SECTION 3: Prime Extraction Protocols (LOCKED)                       -->
+      <!-- ─────────────────────────────────────────────────────────────────── -->
+      <section class="section-block" id="section-prime" aria-labelledby="s3-title" data-locked="true">
+
+        <!-- Section Header with Upgrade Button -->
+        <div class="prime-section-bar">
+          <div class="section-title-left">
+            <div class="section-num" style="background:rgba(168,85,247,0.08);border-color:rgba(168,85,247,0.2);color:var(--text-muted)">3</div>
+            <h2 class="section-name" id="s3-title" style="color:var(--text-dim)">PRIME EXTRACTION PROTOCOLS</h2>
+          </div>
+          <a class="prime-upgrade-btn" href="../premium/premium.html" id="upgrade-matrix-btn" aria-label="Upgrade to unlock matrix">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+            NEED MORE FUNCTIONALITIES? UPGRADE MATRIX
+            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </a>
         </div>
 
+        <!-- ── Sub A: Expanded Allocation Matrix (Slots 3–6) ── -->
+        <div class="prime-sub-header">A. EXPANDED ALLOCATION MATRIX (SLOTS 3 TO 6)</div>
+
+        <div class="alloc-rows">
+
+          <!-- SLOT 3 -->
+          <div class="slot-row locked" id="slot-3-row" data-locked="true" aria-label="Slot 3 — Premium locked">
+            <span class="slot-label">SLOT 3</span>
+            <div class="gesture-icon-box">
+              <svg viewBox="0 0 28 18" aria-hidden="true">
+                <rect x="8" y="1" width="12" height="16" rx="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+                <line x1="14" y1="1" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
+                <line x1="2" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                <line x1="19" y1="9" x2="26" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+              </svg>
+              <span>SWIPE<br>LEFT / RIGHT</span>
+            </div>
+            <div class="favicon-box" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(90,90,114,0.5)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+            </div>
+            <div class="locked-input-wrap">
+              <input class="locked-input" type="text" value="https://your-link.com" disabled aria-hidden="true" tabindex="-1"/>
+            </div>
+            <div class="lock-badge">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <span>LOCKED<br>PREMIUM</span>
+            </div>
+          </div>
+
+          <!-- SLOT 4 -->
+          <div class="slot-row locked" id="slot-4-row" data-locked="true" aria-label="Slot 4 — Premium locked">
+            <span class="slot-label">SLOT 4</span>
+            <div class="gesture-icon-box">
+              <svg viewBox="0 0 28 18" aria-hidden="true">
+                <rect x="8" y="1" width="12" height="16" rx="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+                <line x1="14" y1="1" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
+                <line x1="2" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                <line x1="19" y1="9" x2="26" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+              </svg>
+              <span>SWIPE<br>LEFT / RIGHT</span>
+            </div>
+            <div class="favicon-box" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(90,90,114,0.5)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+            </div>
+            <div class="locked-input-wrap">
+              <input class="locked-input" type="text" value="https://your-link.com" disabled aria-hidden="true" tabindex="-1"/>
+            </div>
+            <div class="lock-badge">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <span>LOCKED<br>PREMIUM</span>
+            </div>
+          </div>
+
+          <!-- SLOT 5 -->
+          <div class="slot-row locked" id="slot-5-row" data-locked="true" aria-label="Slot 5 — Premium locked">
+            <span class="slot-label">SLOT 5</span>
+            <div class="gesture-icon-box">
+              <svg viewBox="0 0 28 18" aria-hidden="true">
+                <rect x="8" y="1" width="12" height="16" rx="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+                <line x1="14" y1="1" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
+                <line x1="2" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                <line x1="19" y1="9" x2="26" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+              </svg>
+              <span>SWIPE<br>LEFT / RIGHT</span>
+            </div>
+            <div class="favicon-box" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(90,90,114,0.5)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+            </div>
+            <div class="locked-input-wrap">
+              <input class="locked-input" type="text" value="https://your-link.com" disabled aria-hidden="true" tabindex="-1"/>
+            </div>
+            <div class="lock-badge">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <span>LOCKED<br>PREMIUM</span>
+            </div>
+          </div>
+
+          <!-- SLOT 6 -->
+          <div class="slot-row locked" id="slot-6-row" data-locked="true" aria-label="Slot 6 — Premium locked">
+            <span class="slot-label">SLOT 6</span>
+            <div class="gesture-icon-box">
+              <svg viewBox="0 0 28 18" aria-hidden="true">
+                <rect x="8" y="1" width="12" height="16" rx="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+                <line x1="14" y1="1" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
+                <line x1="2" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                <line x1="19" y1="9" x2="26" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+              </svg>
+              <span>SWIPE<br>LEFT / RIGHT</span>
+            </div>
+            <div class="favicon-box" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(90,90,114,0.5)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+            </div>
+            <div class="locked-input-wrap">
+              <input class="locked-input" type="text" value="https://your-link.com" disabled aria-hidden="true" tabindex="-1"/>
+            </div>
+            <div class="lock-badge">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <span>LOCKED<br>PREMIUM</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Sub B: HUD Kinetic Interface Widgets ── -->
+        <div class="prime-sub-header" style="margin-top:2px">B. HUD KINETIC INTERFACE WIDGETS</div>
+
+        <!-- Widget row 1 -->
+        <div class="widget-row" id="widget-hud" data-locked="true" aria-label="HUD Clock widget — premium locked">
+          <div class="widget-checkbox" aria-hidden="true"></div>
+          <span class="widget-label">REAL-TIME DIGITAL HUD SYSTEM CLOCK</span>
+          <div class="premium-only-badge">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            LOCKED<br>PREMIUM
+          </div>
+          <select class="locked-select" disabled aria-hidden="true" tabindex="-1">
+            <option>PREMIUM ONLY</option>
+          </select>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" aria-hidden="true" style="opacity:0.35"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+
+        <!-- Widget row 2 -->
+        <div class="widget-row" id="widget-wallpaper" data-locked="true" aria-label="Wallpaper widget — premium locked">
+          <div class="widget-checkbox" aria-hidden="true"></div>
+          <span class="widget-label">TACTICAL MINI-WALLPAPER FRAME GRAPHIC</span>
+          <div class="premium-only-badge">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            LOCKED<br>PREMIUM
+          </div>
+          <select class="locked-select" disabled aria-hidden="true" tabindex="-1">
+            <option>PREMIUM ONLY</option>
+          </select>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" aria-hidden="true" style="opacity:0.35"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+
+        <!-- ── Sub C: Audio Feedback Architecture ── -->
+        <div class="prime-sub-header" style="margin-top:2px">C. AUDIO FEEDBACK ARCHITECTURE</div>
+
+        <div class="audio-label">INTERFACE TRIGGER AUDIO NODE</div>
+
+        <div class="audio-options-row">
+
+          <!-- Default Click — FREE (active) -->
+          <div class="audio-option-card active-card" id="audio-default" role="radio" aria-checked="true">
+            <div class="audio-radio-row">
+              <div class="audio-radio"></div>
+              <span class="audio-card-name">DEFAULT CLICK</span>
+            </div>
+            <div class="waveform" aria-hidden="true">
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            </div>
+            <span class="audio-free-badge">FREE</span>
+          </div>
+
+          <!-- Metallic Sword Slash — LOCKED -->
+          <div class="audio-option-card locked-card" id="audio-sword" data-locked="true" role="radio" aria-checked="false" aria-disabled="true">
+            <div class="audio-radio-row">
+              <div class="audio-radio"></div>
+              <span class="audio-card-name">METALLIC<br>SWORD SLASH</span>
+            </div>
+            <div class="waveform" aria-hidden="true">
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            </div>
+            <span class="audio-prime-badge">PREMIUM ONLY</span>
+          </div>
+
+          <!-- Cybernetic Pulse Beam — LOCKED -->
+          <div class="audio-option-card locked-card" id="audio-pulse" data-locked="true" role="radio" aria-checked="false" aria-disabled="true">
+            <div class="audio-radio-row">
+              <div class="audio-radio"></div>
+              <span class="audio-card-name">CYBERNETIC<br>PULSE BEAM</span>
+            </div>
+            <div class="waveform" aria-hidden="true">
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+              <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            </div>
+            <span class="audio-prime-badge">PREMIUM ONLY</span>
+          </div>
+        </div>
+
+        <!-- Audio lock notice -->
+        <div class="audio-lock-notice" aria-label="Premium audio note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          <span>PREMIUM AUDIO PROTOCOLS REQUIRE VALIDATION. UPGRADE TO UNLOCK.</span>
+        </div>
+
       </section>
 
-    </main><!-- /.content -->
+    </main>
+
   </div><!-- /.page -->
 
-  <!-- Toast -->
+  <!-- Toast notification -->
   <div id="toast" role="alert" aria-live="assertive"></div>
 
   <script src="settings.js"></script>
+  <script>
+    // ── Gesture mode selection ─────────────────────────────────────────────
+    function selectGesture(mode) {
+      const omni = document.getElementById('card-omni');
+      const freehand = document.getElementById('card-freehand');
+      if (mode === 'omni') {
+        omni.classList.add('selected');
+        omni.setAttribute('aria-checked', 'true');
+        freehand.classList.remove('selected');
+        freehand.setAttribute('aria-checked', 'false');
+      } else {
+        freehand.classList.add('selected');
+        freehand.setAttribute('aria-checked', 'true');
+        omni.classList.remove('selected');
+        omni.setAttribute('aria-checked', 'false');
+      }
+      // Save preference
+      try { chrome.storage.sync.set({ gestureMode: mode }); } catch(e) {}
+    }
+
+    // Keyboard support for gesture cards
+    document.getElementById('card-omni').addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectGesture('omni'); }
+    });
+    document.getElementById('card-freehand').addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectGesture('freehand'); }
+    });
+
+    // Load saved gesture mode
+    try {
+      chrome.storage.sync.get(['gestureMode'], (r) => {
+        if (r.gestureMode === 'freehand') selectGesture('freehand');
+      });
+    } catch(e) {}
+
+    // ── Favicon auto-load ──────────────────────────────────────────────────
+    function updateFavicon(inputId, faviconId) {
+      const input = document.getElementById(inputId);
+      const box   = document.getElementById(faviconId);
+      input.addEventListener('input', () => {
+        try {
+          const url    = new URL(input.value);
+          const faviUrl = `https://www.google.com/s2/favicons?sz=32&domain=${url.hostname}`;
+          const img = new Image();
+          img.onload  = () => { box.innerHTML = `<img src="${faviUrl}" width="22" height="22" alt="" style="border-radius:2px"/>`; };
+          img.onerror = () => { /* keep existing */ };
+          img.src = faviUrl;
+        } catch(_) {}
+      });
+    }
+    updateFavicon('slot-1-url', 'favicon-1');
+    updateFavicon('slot-2-url', 'favicon-2');
+
+    // ── Save button ────────────────────────────────────────────────────────
+    document.getElementById('save-btn').addEventListener('click', () => {
+      const data = {
+        slot1Url: document.getElementById('slot-1-url').value,
+        slot2Url: document.getElementById('slot-2-url').value,
+      };
+      try {
+        chrome.storage.sync.set(data, () => {
+          showToast('CONFIG SAVED ✓', 'success');
+        });
+      } catch(e) {
+        showToast('CONFIG SAVED ✓', 'success');
+      }
+    });
+
+    // ── Load saved URLs ────────────────────────────────────────────────────
+    try {
+      chrome.storage.sync.get(['slot1Url', 'slot2Url'], (r) => {
+        if (r.slot1Url) document.getElementById('slot-1-url').value = r.slot1Url;
+        if (r.slot2Url) document.getElementById('slot-2-url').value = r.slot2Url;
+      });
+    } catch(e) {}
+
+    // ── Toast ──────────────────────────────────────────────────────────────
+    function showToast(msg, type = '') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'visible' + (type ? ' ' + type : '');
+      clearTimeout(t._tid);
+      t._tid = setTimeout(() => { t.className = ''; }, 2600);
+    }
+
+    // ── Prime Tooltip (hover on locked elements) ───────────────────────────
+    const tooltip = document.getElementById('prime-tooltip');
+    let tooltipTimer = null;
+    let hideTimer = null;
+
+    // All locked elements that should trigger tooltip
+    const lockedSelectors = [
+      '[data-locked="true"] .slot-row.locked',
+      '.slot-row.locked',
+      '.widget-row',
+      '.audio-option-card.locked-card',
+    ];
+
+    // Attach to all locked elements
+    function attachTooltip(el) {
+      el.addEventListener('mouseenter', (e) => {
+        clearTimeout(hideTimer);
+        positionTooltip(e);
+        tooltipTimer = setTimeout(() => { tooltip.classList.add('visible'); }, 120);
+      });
+      el.addEventListener('mousemove', positionTooltip);
+      el.addEventListener('mouseleave', () => {
+        clearTimeout(tooltipTimer);
+        hideTimer = setTimeout(() => { tooltip.classList.remove('visible'); }, 200);
+      });
+    }
+
+    // Also attach to entire section-prime for locked overlay
+    const primeSection = document.getElementById('section-prime');
+    const allLockedRows = primeSection.querySelectorAll('.slot-row.locked, .widget-row, .audio-option-card.locked-card');
+    allLockedRows.forEach(attachTooltip);
+
+    // Tooltip stays visible when hovering over it
+    tooltip.addEventListener('mouseenter', () => { clearTimeout(hideTimer); });
+    tooltip.addEventListener('mouseleave', () => {
+      hideTimer = setTimeout(() => { tooltip.classList.remove('visible'); }, 200);
+    });
+
+    function positionTooltip(e) {
+      const tw = tooltip.offsetWidth  || 290;
+      const th = tooltip.offsetHeight || 130;
+      const margin = 14;
+      let x = e.clientX - tw / 2;
+      let y = e.clientY - th - margin;
+      // Clamp horizontal
+      if (x < 8) x = 8;
+      if (x + tw > window.innerWidth - 8) x = window.innerWidth - tw - 8;
+      // Flip below if off-screen top
+      if (y < 8) y = e.clientY + margin;
+      tooltip.style.left = x + 'px';
+      tooltip.style.top  = y + 'px';
+    }
+
+    // ── Sidebar nav active switching ───────────────────────────────────────
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.nav-item').forEach(n => {
+          n.classList.remove('active');
+          n.removeAttribute('aria-current');
+        });
+        item.classList.add('active');
+        item.setAttribute('aria-current', 'page');
+      });
+    });
+  </script>
 </body>
 </html>
