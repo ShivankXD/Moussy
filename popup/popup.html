@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MOUSSY</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <!--
+    MOUSSY — Action Toolbar Popup
+    ==============================
+    This is the compact popup shown when the user clicks the extension icon.
+    It provides quick-access toggles and a link to the full Options page.
+
+    TODO:
+      - Enable / Disable gesture engine toggle
+      - Gesture sensitivity slider (quick access)
+      - Sound on/off toggle
+      - "Open Full Config" button → options/options.html
+      - Live gesture count / last gesture indicator
+  -->
+  <div id="moussy-popup">
+    <header id="popup-header">
+      <span class="logo">MOUSSY</span>
+      <span class="version">v0.1.0</span>
+    </header>
+    <main id="popup-body">
+      <p class="placeholder-text">Popup UI coming soon…</p>
+    </main>
+    <footer id="popup-footer">
+      <a id="open-options" href="#">Open Full Config ↗</a>
+    </footer>
+  </div>
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

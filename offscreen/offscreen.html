@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MOUSSY — Offscreen Audio</title>
+</head>
+<body>
+  <!--
+    MOUSSY — Offscreen Document
+    ============================
+    Exists solely to host the Web Audio API context for premium sound playback.
+    The offscreen document runs off-screen so audio never blocks the active tab.
+
+    Chrome requires at least one DOM element to justify an offscreen document,
+    hence this minimal page.
+
+    Audio clips are triggered by messages from background.js:
+      { type: 'PLAY_SOUND', payload: { clip: 'gesture_match', volume: 0.8 } }
+
+    TODO:
+      - Implement AudioManager class (preload, cache, play, fade)
+      - Handle volume, pitch, and reverb parameters
+      - Support layered / stacked sound effects
+  -->
+  <script src="offscreen.js" type="module"></script>
+</body>
+</html>

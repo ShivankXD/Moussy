@@ -1,0 +1,47 @@
+/*
+ * MOUSSY — Options Page Styles
+ * ==============================
+ * Full-tab dark cyberpunk config UI.
+ * TODO: implement complete design system.
+ */
+
+:root {
+  --clr-bg:       #07070e;
+  --clr-surface:  #0f0f1a;
+  --clr-accent:   #00f0ff;
+  --clr-accent-2: #bf00ff;
+  --clr-text:     #dde0f5;
+  --clr-muted:    #44445a;
+  --font:         'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--clr-bg);
+  color: var(--clr-text);
+  font-family: var(--font);
+  min-height: 100vh;
+}
+
+#options-header {
+  padding: 40px 60px 24px;
+  border-bottom: 1px solid #1a1a2e;
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  background: linear-gradient(90deg, var(--clr-accent), var(--clr-accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle { color: var(--clr-muted); margin-top: 4px; }
+
+#options-body {
+  padding: 40px 60px;
+}
+
+.placeholder-text { color: var(--clr-muted); }
