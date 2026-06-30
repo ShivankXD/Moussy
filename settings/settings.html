@@ -19,9 +19,9 @@
       --surface-2:     #111118;
       --surface-3:     #0a0a10;
       --surface-4:     #161620;
-      --border:        #1a1a26;
-      --border-bright: #252535;
-      --border-purple: rgba(168,85,247,0.3);
+      --border:        #2a2a3d;
+      --border-bright: #3a3a52;
+      --border-purple: rgba(168,85,247,0.4);
 
       --purple:        #a855f7;
       --purple-dim:    #7c3aed;
@@ -39,10 +39,10 @@
       --red:           #f87171;
       --cyan:          #22d3ee;
 
-      --text:          #dde0f0;
-      --text-muted:    #4a4a66;
-      --text-dim:      #7878a0;
-      --text-mid:      #9090b8;
+      --text:          #ececf8;
+      --text-muted:    #8888ad;
+      --text-dim:      #a8a8cc;
+      --text-mid:      #c2c2e0;
 
       --sidebar-w:     82px;
       --topbar-h:      56px;
@@ -726,7 +726,7 @@
 
     /* ── Locked Slot Rows ────────────────────────────────────────────────── */
     .slot-row.locked {
-      opacity: 0.4;
+      opacity: 0.72;
       pointer-events: none;
       cursor: not-allowed;
     }
@@ -859,7 +859,7 @@
 
     /* Locked audio cards */
     .audio-option-card.locked-card {
-      opacity: 0.4;
+      opacity: 0.72;
       pointer-events: none;
     }
 
@@ -1167,92 +1167,39 @@
     </nav>
 
     <!-- ── Sidebar ───────────────────────────────────────────────────────── -->
-    <aside class="sidebar" aria-label="Settings navigation">
+    <aside class="sidebar" aria-label="Site navigation">
 
-      <!-- Dashboard -->
-      <a class="nav-item active" href="#" id="nav-dashboard" aria-current="page">
+      <!-- Settings (this page) -->
+      <a class="nav-item active" href="settings.html" id="nav-settings" aria-current="page">
         <div class="nav-icon-wrap">
-          <!-- Dashboard / grid icon -->
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="3" width="8" height="8" rx="1"/>
-            <rect x="13" y="3" width="8" height="8" rx="1"/>
-            <rect x="3" y="13" width="8" height="8" rx="1"/>
-            <rect x="13" y="13" width="8" height="8" rx="1"/>
-          </svg>
-        </div>
-        <span class="nav-label">DASHBOARD</span>
-      </a>
-
-      <!-- Protocols -->
-      <a class="nav-item" href="#" id="nav-protocols">
-        <div class="nav-icon-wrap">
-          <!-- Gesture/protocol icon -->
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="9"/>
-            <line x1="12" y1="3" x2="12" y2="8"/>
-            <line x1="12" y1="16" x2="12" y2="21"/>
-            <line x1="3" y1="12" x2="8" y2="12"/>
-            <line x1="16" y1="12" x2="21" y2="12"/>
-            <circle cx="12" cy="12" r="2"/>
-          </svg>
-        </div>
-        <span class="nav-label">PROTOCOLS</span>
-      </a>
-
-      <!-- Appearance -->
-      <a class="nav-item" href="#" id="nav-appearance">
-        <div class="nav-icon-wrap">
-          <!-- Palette icon -->
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.1 0 2-.9 2-2 0-.52-.2-1-.52-1.36-.32-.35-.52-.83-.52-1.34 0-1.1.9-2 2-2h2.36c3.1 0 5.64-2.54 5.64-5.64C22.96 6.2 17.92 2 12 2z"/>
-            <circle cx="7" cy="12" r="1.5"/>
-            <circle cx="9.5" cy="7.5" r="1.5"/>
-            <circle cx="14.5" cy="7.5" r="1.5"/>
-          </svg>
-        </div>
-        <span class="nav-label">APPEARANCE</span>
-      </a>
-
-      <div class="sidebar-divider" aria-hidden="true"></div>
-
-      <!-- Audio -->
-      <a class="nav-item" href="#" id="nav-audio">
-        <div class="nav-icon-wrap">
-          <!-- Speaker/audio icon -->
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-            <path d="M15.54 8.46a5 5 0 010 7.07"/>
-            <path d="M19.07 4.93a10 10 0 010 14.14"/>
-          </svg>
-        </div>
-        <span class="nav-label">AUDIO</span>
-      </a>
-
-      <!-- Advanced -->
-      <a class="nav-item" href="#" id="nav-advanced">
-        <div class="nav-icon-wrap">
-          <!-- Gear/settings icon -->
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
           </svg>
         </div>
-        <span class="nav-label">ADVANCED</span>
+        <span class="nav-label">SETTINGS</span>
       </a>
 
-      <div class="sidebar-divider" aria-hidden="true"></div>
-
-      <!-- About -->
-      <a class="nav-item" href="#" id="nav-about">
+      <!-- Pricing -->
+      <a class="nav-item" href="../premium/premium.html" id="nav-pricing">
         <div class="nav-icon-wrap">
-          <!-- Info icon -->
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="16" x2="12" y2="12"/>
-            <line x1="12" y1="8" x2="12.01" y2="8"/>
+            <path d="M3 17h18l-1.5-9-4.5 4-3-6-3 6-4.5-4L3 17z"/>
+            <line x1="3" y1="20" x2="21" y2="20"/>
           </svg>
         </div>
-        <span class="nav-label">ABOUT</span>
+        <span class="nav-label">PRICING</span>
+      </a>
+
+      <!-- Contact -->
+      <a class="nav-item" href="../contact/contact.html" id="nav-contact">
+        <div class="nav-icon-wrap">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="2"/>
+            <path d="M3 7l9 6 9-6"/>
+          </svg>
+        </div>
+        <span class="nav-label">CONTACT</span>
       </a>
 
     </aside>
@@ -1272,12 +1219,12 @@
         </div>
 
         <div class="gesture-cards-row">
-          <!-- ── Card 1: OMNI-CLOCK MODE ── -->
-          <div class="gesture-card selected" id="card-omni" role="radio" aria-checked="true" tabindex="0" onclick="selectGesture('omni')">
+          <!-- ── Card 1: RADIAL DIAL MODE (the only mode) ── -->
+          <div class="gesture-card selected" id="card-omni" role="radio" aria-checked="true" tabindex="0">
             <div class="gesture-card-top">
               <div class="gesture-radio" id="radio-omni"></div>
               <div>
-                <div class="gesture-card-title">OMNI-CLOCK MODE<br><span style="opacity:0.7">(BEN 10 WATCH STYLE)</span></div>
+                <div class="gesture-card-title">RADIAL DIAL MODE<br><span style="opacity:0.7">(PRESS-HOLD RIGHT CLICK)</span></div>
                 <div class="gesture-card-sub" style="margin-top:3px"></div>
               </div>
             </div>
@@ -1391,78 +1338,10 @@
             </div>
 
             <p class="gesture-card-desc">
-              Triggers a high-tech magical visual circle HUD directly around your cursor during stroke execution.
+              Press and hold the right mouse button to summon an 8-slot dial around your cursor. Move toward a slot to select it (a tick sounds on each slot), release to fire. Release in the centre to cancel.
             </p>
           </div>
 
-          <!-- ── Card 2: FREE-HAND MATRIX ── -->
-          <div class="gesture-card" id="card-freehand" role="radio" aria-checked="false" tabindex="0" onclick="selectGesture('freehand')">
-            <div class="gesture-card-top">
-              <div class="gesture-radio" id="radio-freehand"></div>
-              <div>
-                <div class="gesture-card-title">FREE-HAND MATRIX<br><span style="opacity:0.7">(PEN DRAWING STYLE)</span></div>
-              </div>
-            </div>
-
-            <!-- Freehand neon trail graphic -->
-            <div class="freehand-graphic">
-              <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Free-hand trail preview">
-                <defs>
-                  <filter id="trailGlow">
-                    <feGaussianBlur stdDeviation="2" result="blur"/>
-                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                  </filter>
-                  <linearGradient id="trailGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#a855f7" stop-opacity="0.1"/>
-                    <stop offset="50%" stop-color="#a855f7" stop-opacity="0.8"/>
-                    <stop offset="100%" stop-color="#c084fc" stop-opacity="1"/>
-                  </linearGradient>
-                </defs>
-
-                <!-- Faded trail start -->
-                <path d="M 25 85 Q 30 60 40 50 Q 55 35 60 45 Q 65 55 72 42 Q 82 25 88 35"
-                  stroke="url(#trailGrad)" stroke-width="3"
-                  stroke-linecap="round" stroke-linejoin="round"
-                  fill="none" filter="url(#trailGlow)"
-                  class="trail-path"/>
-
-                <!-- Bright end of trail -->
-                <path d="M 72 42 Q 82 25 88 35"
-                  stroke="#c084fc" stroke-width="4"
-                  stroke-linecap="round"
-                  fill="none" filter="url(#trailGlow)"
-                  opacity="0.9"/>
-
-                <!-- Glowing dots along trail -->
-                <circle cx="40" cy="50" r="2.5" fill="#a855f7" opacity="0.6" filter="url(#trailGlow)"/>
-                <circle cx="60" cy="45" r="2" fill="#a855f7" opacity="0.5" filter="url(#trailGlow)"/>
-                <circle cx="72" cy="42" r="2.5" fill="#c084fc" opacity="0.7" filter="url(#trailGlow)"/>
-
-                <!-- End bright dot -->
-                <circle cx="88" cy="35" r="3.5" fill="#c084fc" filter="url(#trailGlow)"/>
-                <circle cx="88" cy="35" r="6" fill="#a855f7" opacity="0.2" filter="url(#trailGlow)"/>
-
-                <!-- Cursor arrow at end - floating animation -->
-                <g class="cursor-float">
-                  <!-- White cursor arrow shape -->
-                  <path d="M78,70 L78,84 L81,81 L83,85 L85,84 L83,80 L87,80 Z"
-                    fill="white" opacity="0.9" stroke="rgba(168,85,247,0.7)" stroke-width="0.5"/>
-                </g>
-
-                <!-- Sparse grid dots in background -->
-                <circle cx="20" cy="30" r="1" fill="rgba(168,85,247,0.15)"/>
-                <circle cx="40" cy="20" r="1" fill="rgba(168,85,247,0.15)"/>
-                <circle cx="80" cy="20" r="1" fill="rgba(168,85,247,0.15)"/>
-                <circle cx="100" cy="40" r="1" fill="rgba(168,85,247,0.15)"/>
-                <circle cx="20" cy="100" r="1" fill="rgba(168,85,247,0.1)"/>
-                <circle cx="100" cy="90" r="1" fill="rgba(168,85,247,0.1)"/>
-              </svg>
-            </div>
-
-            <p class="gesture-card-desc">
-              Provides a raw, kinetic glowing trail map following your custom drawing paths.
-            </p>
-          </div>
         </div>
       </section>
 
@@ -1474,7 +1353,7 @@
         <div class="section-title-bar">
           <div class="section-title-left">
             <div class="section-num">2</div>
-            <h2 class="section-name" id="s2-title">CORE ALLOCATION MATRIX (FREE SLOTS)</h2>
+            <h2 class="section-name" id="s2-title">CORE ALLOCATION — FREE SLOT (NORTH)</h2>
           </div>
         </div>
 
@@ -1484,18 +1363,13 @@
           <div class="slot-row" id="slot-1-row">
             <span class="slot-label">SLOT 1</span>
 
-            <!-- Gesture icon -->
-            <div class="gesture-icon-box" title="Swipe Left gesture">
-              <svg viewBox="0 0 28 18" aria-label="Mouse swipe left">
-                <!-- Mouse body -->
-                <rect x="8" y="1" width="12" height="16" rx="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
-                <line x1="14" y1="1" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
-                <!-- Arrow left -->
-                <polyline points="4,9 1,9" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
-                <polyline points="1,9 3,7" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
-                <polyline points="1,9 3,11" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
+            <!-- Radial position -->
+            <div class="gesture-icon-box" title="North slot (top of the dial)">
+              <svg viewBox="0 0 28 18" aria-label="North / top of dial">
+                <circle cx="14" cy="9" r="7" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                <path d="M14 3 L11 7 L17 7 Z" fill="#a855f7"/>
               </svg>
-              <span>SWIPE LEFT</span>
+              <span>NORTH ▲</span>
             </div>
 
             <!-- Favicon box — Wikipedia W -->
@@ -1531,54 +1405,6 @@
             </div>
           </div>
 
-          <!-- SLOT 2 -->
-          <div class="slot-row" id="slot-2-row">
-            <span class="slot-label">SLOT 2</span>
-
-            <!-- Gesture icon -->
-            <div class="gesture-icon-box" title="Swipe Right gesture">
-              <svg viewBox="0 0 28 18" aria-label="Mouse swipe right">
-                <rect x="8" y="1" width="12" height="16" rx="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
-                <line x1="14" y1="1" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
-                <polyline points="24,9 27,9" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
-                <polyline points="27,9 25,7" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
-                <polyline points="27,9 25,11" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <span>SWIPE RIGHT</span>
-            </div>
-
-            <!-- Favicon box — YouTube play -->
-            <div class="favicon-box" id="favicon-2" title="YouTube favicon">
-              <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">
-                <rect width="32" height="32" rx="6" fill="#FF0000"/>
-                <polygon points="13,10 13,22 22,16" fill="white"/>
-              </svg>
-            </div>
-
-            <!-- URL Input -->
-            <div class="url-input-wrap">
-              <input
-                class="url-input"
-                id="slot-2-url"
-                type="url"
-                value="https://youtube.com"
-                placeholder="https://your-link.com"
-                aria-label="Slot 2 destination URL"
-                autocomplete="off"
-                spellcheck="false"
-              />
-            </div>
-
-            <!-- Actions -->
-            <div class="slot-actions">
-              <button class="slot-action-btn" title="Edit slot 2" aria-label="Edit slot 2">
-                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </button>
-              <button class="slot-action-btn delete" title="Delete slot 2" aria-label="Delete slot 2">
-                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-              </button>
-            </div>
-          </div>
 
         </div>
       </section>
@@ -1602,102 +1428,94 @@
           </a>
         </div>
 
-        <!-- ── Sub A: Expanded Allocation Matrix (Slots 3–6) ── -->
-        <div class="prime-sub-header">A. EXPANDED ALLOCATION MATRIX (SLOTS 3 TO 6)</div>
+        <!-- ── Sub A: Expanded Allocation (Slots 2–5 · NE / SE / SW / NW) ── -->
+        <div class="prime-sub-header">A. EXPANDED ALLOCATION — SLOTS 2-5 (NE / SE / SW / NW)</div>
 
-        <div class="alloc-rows">
+        <div class="alloc-rows" id="premium-slots">
 
-          <!-- SLOT 3 -->
-          <div class="slot-row locked" id="slot-3-row" data-locked="true" aria-label="Slot 3 — Premium locked">
+          <!-- SLOT 2 (NE) -->
+          <div class="slot-row locked" id="slot-2-row" data-slot="2" data-premium="true" data-locked="true" aria-label="Slot 2 (North-East) — Premium">
+            <span class="slot-label">SLOT 2</span>
+            <div class="gesture-icon-box" title="North-East slot">
+              <svg viewBox="0 0 28 18" aria-hidden="true">
+                <circle cx="14" cy="9" r="7" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                <circle cx="19" cy="5" r="2.4" fill="#a855f7"/>
+              </svg>
+              <span>NE</span>
+            </div>
+            <div class="favicon-box" id="favicon-2" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(90,90,114,0.5)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+            </div>
+            <div class="url-input-wrap">
+              <input class="url-input" id="slot-2-url" type="url" placeholder="Premium — https://your-link.com" aria-label="Slot 2 destination URL" disabled autocomplete="off" spellcheck="false"/>
+            </div>
+            <div class="lock-badge" data-lockbadge="2">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <span>LOCKED<br>PREMIUM</span>
+            </div>
+          </div>
+
+          <!-- SLOT 3 (SE) -->
+          <div class="slot-row locked" id="slot-3-row" data-slot="3" data-premium="true" data-locked="true" aria-label="Slot 3 (South-East) — Premium">
             <span class="slot-label">SLOT 3</span>
-            <div class="gesture-icon-box">
+            <div class="gesture-icon-box" title="South-East slot">
               <svg viewBox="0 0 28 18" aria-hidden="true">
-                <rect x="8" y="1" width="12" height="16" rx="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
-                <line x1="14" y1="1" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
-                <line x1="2" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
-                <line x1="19" y1="9" x2="26" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                <circle cx="14" cy="9" r="7" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                <circle cx="19" cy="13" r="2.4" fill="#a855f7"/>
               </svg>
-              <span>SWIPE<br>LEFT / RIGHT</span>
+              <span>SE</span>
             </div>
-            <div class="favicon-box" aria-hidden="true">
+            <div class="favicon-box" id="favicon-3" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(90,90,114,0.5)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
             </div>
-            <div class="locked-input-wrap">
-              <input class="locked-input" type="text" value="https://your-link.com" disabled aria-hidden="true" tabindex="-1"/>
+            <div class="url-input-wrap">
+              <input class="url-input" id="slot-3-url" type="url" placeholder="Premium — https://your-link.com" aria-label="Slot 3 destination URL" disabled autocomplete="off" spellcheck="false"/>
             </div>
-            <div class="lock-badge">
+            <div class="lock-badge" data-lockbadge="3">
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
               <span>LOCKED<br>PREMIUM</span>
             </div>
           </div>
 
-          <!-- SLOT 4 -->
-          <div class="slot-row locked" id="slot-4-row" data-locked="true" aria-label="Slot 4 — Premium locked">
+          <!-- SLOT 4 (SW) -->
+          <div class="slot-row locked" id="slot-4-row" data-slot="4" data-premium="true" data-locked="true" aria-label="Slot 4 (South-West) — Premium">
             <span class="slot-label">SLOT 4</span>
-            <div class="gesture-icon-box">
+            <div class="gesture-icon-box" title="South-West slot">
               <svg viewBox="0 0 28 18" aria-hidden="true">
-                <rect x="8" y="1" width="12" height="16" rx="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
-                <line x1="14" y1="1" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
-                <line x1="2" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
-                <line x1="19" y1="9" x2="26" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                <circle cx="14" cy="9" r="7" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                <circle cx="9" cy="13" r="2.4" fill="#a855f7"/>
               </svg>
-              <span>SWIPE<br>LEFT / RIGHT</span>
+              <span>SW</span>
             </div>
-            <div class="favicon-box" aria-hidden="true">
+            <div class="favicon-box" id="favicon-4" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(90,90,114,0.5)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
             </div>
-            <div class="locked-input-wrap">
-              <input class="locked-input" type="text" value="https://your-link.com" disabled aria-hidden="true" tabindex="-1"/>
+            <div class="url-input-wrap">
+              <input class="url-input" id="slot-4-url" type="url" placeholder="Premium — https://your-link.com" aria-label="Slot 4 destination URL" disabled autocomplete="off" spellcheck="false"/>
             </div>
-            <div class="lock-badge">
+            <div class="lock-badge" data-lockbadge="4">
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
               <span>LOCKED<br>PREMIUM</span>
             </div>
           </div>
 
-          <!-- SLOT 5 -->
-          <div class="slot-row locked" id="slot-5-row" data-locked="true" aria-label="Slot 5 — Premium locked">
+          <!-- SLOT 5 (NW) -->
+          <div class="slot-row locked" id="slot-5-row" data-slot="5" data-premium="true" data-locked="true" aria-label="Slot 5 (North-West) — Premium">
             <span class="slot-label">SLOT 5</span>
-            <div class="gesture-icon-box">
+            <div class="gesture-icon-box" title="North-West slot">
               <svg viewBox="0 0 28 18" aria-hidden="true">
-                <rect x="8" y="1" width="12" height="16" rx="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
-                <line x1="14" y1="1" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
-                <line x1="2" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
-                <line x1="19" y1="9" x2="26" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                <circle cx="14" cy="9" r="7" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                <circle cx="9" cy="5" r="2.4" fill="#a855f7"/>
               </svg>
-              <span>SWIPE<br>LEFT / RIGHT</span>
+              <span>NW</span>
             </div>
-            <div class="favicon-box" aria-hidden="true">
+            <div class="favicon-box" id="favicon-5" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(90,90,114,0.5)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
             </div>
-            <div class="locked-input-wrap">
-              <input class="locked-input" type="text" value="https://your-link.com" disabled aria-hidden="true" tabindex="-1"/>
+            <div class="url-input-wrap">
+              <input class="url-input" id="slot-5-url" type="url" placeholder="Premium — https://your-link.com" aria-label="Slot 5 destination URL" disabled autocomplete="off" spellcheck="false"/>
             </div>
-            <div class="lock-badge">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-              <span>LOCKED<br>PREMIUM</span>
-            </div>
-          </div>
-
-          <!-- SLOT 6 -->
-          <div class="slot-row locked" id="slot-6-row" data-locked="true" aria-label="Slot 6 — Premium locked">
-            <span class="slot-label">SLOT 6</span>
-            <div class="gesture-icon-box">
-              <svg viewBox="0 0 28 18" aria-hidden="true">
-                <rect x="8" y="1" width="12" height="16" rx="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
-                <line x1="14" y1="1" x2="14" y2="7" stroke="currentColor" stroke-width="1"/>
-                <line x1="2" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
-                <line x1="19" y1="9" x2="26" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
-              </svg>
-              <span>SWIPE<br>LEFT / RIGHT</span>
-            </div>
-            <div class="favicon-box" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(90,90,114,0.5)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
-            </div>
-            <div class="locked-input-wrap">
-              <input class="locked-input" type="text" value="https://your-link.com" disabled aria-hidden="true" tabindex="-1"/>
-            </div>
-            <div class="lock-badge">
+            <div class="lock-badge" data-lockbadge="5">
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
               <span>LOCKED<br>PREMIUM</span>
             </div>
@@ -1811,39 +1629,9 @@
 
   <script src="settings.js"></script>
   <script>
-    // ── Gesture mode selection ─────────────────────────────────────────────
-    function selectGesture(mode) {
-      const omni = document.getElementById('card-omni');
-      const freehand = document.getElementById('card-freehand');
-      if (mode === 'omni') {
-        omni.classList.add('selected');
-        omni.setAttribute('aria-checked', 'true');
-        freehand.classList.remove('selected');
-        freehand.setAttribute('aria-checked', 'false');
-      } else {
-        freehand.classList.add('selected');
-        freehand.setAttribute('aria-checked', 'true');
-        omni.classList.remove('selected');
-        omni.setAttribute('aria-checked', 'false');
-      }
-      // Save preference
-      try { chrome.storage.sync.set({ gestureMode: mode }); } catch(e) {}
-    }
-
-    // Keyboard support for gesture cards
-    document.getElementById('card-omni').addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectGesture('omni'); }
-    });
-    document.getElementById('card-freehand').addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectGesture('freehand'); }
-    });
-
-    // Load saved gesture mode
-    try {
-      chrome.storage.sync.get(['gestureMode'], (r) => {
-        if (r.gestureMode === 'freehand') selectGesture('freehand');
-      });
-    } catch(e) {}
+    // ── Gesture mode ───────────────────────────────────────────────────────
+    // Radial Dial is the only mode now (free-hand was removed), so there is no
+    // mode selector to wire — the single card is always selected.
 
     // ── Favicon auto-load ──────────────────────────────────────────────────
     function updateFavicon(inputId, faviconId) {
@@ -1860,31 +1648,43 @@
         } catch(_) {}
       });
     }
-    updateFavicon('slot-1-url', 'favicon-1');
-    updateFavicon('slot-2-url', 'favicon-2');
+    for (let i = 1; i <= 5; i++) updateFavicon(`slot-${i}-url`, `favicon-${i}`);
 
-    // ── Save button ────────────────────────────────────────────────────────
-    document.getElementById('save-btn').addEventListener('click', () => {
-      const data = {
-        slot1Url: document.getElementById('slot-1-url').value,
-        slot2Url: document.getElementById('slot-2-url').value,
-      };
-      try {
-        chrome.storage.sync.set(data, () => {
-          showToast('CONFIG SAVED ✓', 'success');
-        });
-      } catch(e) {
-        showToast('CONFIG SAVED ✓', 'success');
+    // ── Premium unlock (Slots 2-5 / NE,SE,SW,NW) ───────────────────────────
+    // Slots 2-5 are disabled + lock-badged for free users. On a paid plan we
+    // enable the inputs and hide the lock badges so they can be configured.
+    function applyPremiumGate(plan) {
+      const premium = plan === 'monthly' || plan === 'legend';
+      for (let i = 2; i <= 5; i++) {
+        const row   = document.getElementById(`slot-${i}-row`);
+        const input = document.getElementById(`slot-${i}-url`);
+        const badge = document.querySelector(`[data-lockbadge="${i}"]`);
+        if (!row || !input) continue;
+        if (premium) {
+          row.classList.remove('locked');
+          row.removeAttribute('data-locked');
+          input.disabled = false;
+          if (badge) badge.style.display = 'none';
+        } else {
+          row.classList.add('locked');
+          row.setAttribute('data-locked', 'true');
+          input.disabled = true;
+          if (badge) badge.style.display = '';
+        }
       }
-    });
-
-    // ── Load saved URLs ────────────────────────────────────────────────────
+    }
     try {
-      chrome.storage.sync.get(['slot1Url', 'slot2Url'], (r) => {
-        if (r.slot1Url) document.getElementById('slot-1-url').value = r.slot1Url;
-        if (r.slot2Url) document.getElementById('slot-2-url').value = r.slot2Url;
+      chrome.storage.local.get(['moussy_plan'], (r) => applyPremiumGate(r.moussy_plan || 'free'));
+      chrome.storage.onChanged.addListener((c, area) => {
+        if (area === 'local' && c.moussy_plan) applyPremiumGate(c.moussy_plan.newValue || 'free');
       });
-    } catch(e) {}
+    } catch (_) { applyPremiumGate('free'); }
+
+    // ── Slot persistence ───────────────────────────────────────────────────
+    // Owned entirely by settings.js (SlotManager + SaveManager), which reads
+    // and writes the canonical `moussy_gesture_slots` array in storage.local
+    // and wires the #save-btn. No duplicate slot logic here — a second path
+    // (the old slot1Url/slot2Url keys) silently fragmented the data.
 
     // ── Toast ──────────────────────────────────────────────────────────────
     function showToast(msg, type = '') {
@@ -1948,18 +1748,8 @@
       tooltip.style.top  = y + 'px';
     }
 
-    // ── Sidebar nav active switching ───────────────────────────────────────
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelectorAll('.nav-item').forEach(n => {
-          n.classList.remove('active');
-          n.removeAttribute('aria-current');
-        });
-        item.classList.add('active');
-        item.setAttribute('aria-current', 'page');
-      });
-    });
+    // Sidebar items are real links (Settings / Pricing / Contact) — let them
+    // navigate normally; no click interception needed.
   </script>
 </body>
 </html>

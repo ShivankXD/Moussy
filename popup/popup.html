@@ -2,136 +2,222 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>MOUSSY — Control Panel</title>
   <!--
-    MOUSSY — Launch Bridge Popup
-    ════════════════════════════
-    This popup exists for exactly one frame.
-    popup.js immediately opens settings.html in a new tab and calls window.close().
+    MOUSSY — Control Panel Popup (key-art layout)
+    ═════════════════════════════════════════════
+    Two-column HUD: brand + pause toggles + SETTINGS + BUY PREMIUM on the left,
+    the segmented gesture wheel with a hero centrepiece on the right.
 
-    The splash screen below is rendered for the ~50ms window between
-    DOMContentLoaded and the close() call — it prevents any white flash
-    and gives the extension a premium, intentional feel.
+    Hero art: drop a transparent PNG at assets/art/hero.png and it is shown in
+    the wheel centre; otherwise the vector mouse/emblem fallback is used.
 
-    Width × height is deliberately minimal to minimise the popup frame
-    flash on slower machines.
+    CSP: extension pages forbid inline scripts/handlers — behaviour is in popup.js.
   -->
-  <style>
-    /* ── Instant paint — no external font request needed for 50ms ── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:       #0a0a0c;
-      --purple:   #a855f7;
-      --pglow:    rgba(168, 85, 247, 0.5);
-    }
-
-    html, body {
-      width:  220px;
-      height: 90px;
-      background: var(--bg);
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* Faint grid — matches global design language */
-    body::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(168,85,247,0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(168,85,247,0.05) 1px, transparent 1px);
-      background-size: 22px 22px;
-      pointer-events: none;
-    }
-
-    /* Top + bottom edge lines */
-    body::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-top:    1px solid rgba(168,85,247,0.3);
-      border-bottom: 1px solid rgba(168,85,247,0.15);
-      pointer-events: none;
-    }
-
-    /* ── Splash content ── */
-    #splash {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      animation: appear 0.12s ease forwards;
-    }
-
-    @keyframes appear {
-      from { opacity: 0; transform: scale(0.96); }
-      to   { opacity: 1; transform: scale(1); }
-    }
-
-    .wordmark {
-      font-family:     'Courier New', 'Lucida Console', monospace; /* safe monospace fallback — no network req */
-      font-size:       16px;
-      font-weight:     700;
-      letter-spacing:  6px;
-      /* Neon purple gradient — pure CSS, no image */
-      background:      linear-gradient(90deg, #c084fc, var(--purple));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      text-shadow:     none;
-      filter:          drop-shadow(0 0 8px var(--pglow));
-    }
-
-    /* ── Animated launch bar ── */
-    .launch-bar {
-      width:         120px;
-      height:        2px;
-      background:    rgba(255,255,255,0.06);
-      border-radius: 2px;
-      overflow:      hidden;
-    }
-
-    .launch-fill {
-      height:           100%;
-      width:            0%;
-      background:       linear-gradient(90deg, var(--purple), #c084fc);
-      border-radius:    2px;
-      box-shadow:       0 0 8px var(--pglow);
-      animation:        fillBar 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-
-    @keyframes fillBar {
-      from { width:   0%; }
-      to   { width: 100%; }
-    }
-
-    .launch-label {
-      font-family:  'Courier New', monospace;
-      font-size:    9px;
-      letter-spacing: 2.5px;
-      color:        rgba(168, 85, 247, 0.6);
-    }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Inter:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <div id="splash" aria-label="Launching MOUSSY configuration panel" role="status">
-    <span class="wordmark">MOUSSY</span>
-    <div class="launch-bar" aria-hidden="true">
-      <div class="launch-fill"></div>
+  <div class="hud-frame">
+    <span class="corner tl" aria-hidden="true"></span>
+    <span class="corner tr" aria-hidden="true"></span>
+    <span class="corner bl" aria-hidden="true"></span>
+    <span class="corner br" aria-hidden="true"></span>
+
+    <!-- window controls -->
+    <div class="window-controls">
+      <button class="win-btn" id="btn-min" type="button" title="Minimize" aria-label="Minimize">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <button class="win-btn" id="btn-close" type="button" title="Close" aria-label="Close">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
     </div>
-    <span class="launch-label">LAUNCHING CONFIG</span>
+
+    <div class="layout">
+      <!-- ── LEFT COLUMN ── -->
+      <div class="col-left">
+        <header class="brand">
+          <img class="brand-logo" src="../assets/icons/icon128.png" alt="MOUSSY logo" />
+          <div class="brand-text">
+            <div class="brand-word">MOUSSY</div>
+            <div class="brand-sub">CONTROL. POWER. PRECISION.</div>
+          </div>
+        </header>
+
+        <!-- pause: this site -->
+        <div class="toggle-row" id="row-site">
+          <label class="switch">
+            <input type="checkbox" id="toggle-site" aria-label="Pause on this site" />
+            <span class="track" aria-hidden="true"></span>
+            <span class="thumb" aria-hidden="true"></span>
+          </label>
+          <div class="toggle-labels">
+            <span class="toggle-title">Pause on this site</span>
+            <span class="toggle-sub" id="site-host">—</span>
+          </div>
+        </div>
+
+        <!-- pause: all sites -->
+        <div class="toggle-row" id="row-all">
+          <label class="switch">
+            <input type="checkbox" id="toggle-all" aria-label="Pause on all sites" />
+            <span class="track" aria-hidden="true"></span>
+            <span class="thumb" aria-hidden="true"></span>
+          </label>
+          <div class="toggle-labels">
+            <span class="toggle-title">Pause on all sites</span>
+            <span class="toggle-sub">Disable gestures everywhere</span>
+          </div>
+        </div>
+
+        <!-- settings -->
+        <button class="panel panel-settings" id="btn-settings" type="button">
+          <span class="p-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3.2"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </span>
+          <span class="p-title">SETTINGS</span>
+          <span class="p-arrow" aria-hidden="true">›</span>
+        </button>
+
+        <!-- buy premium -->
+        <button class="panel panel-premium" id="btn-premium" type="button">
+          <span class="p-icon" aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 17h18l-1.5-9-4.5 4-3-6-3 6-4.5-4L3 17zm0 2v1.2a.8.8 0 0 0 .8.8h16.4a.8.8 0 0 0 .8-.8V19H3z"/>
+            </svg>
+          </span>
+          <div class="p-body">
+            <span class="p-kicker" id="premium-kicker">Need more functionalities?</span>
+            <span class="p-title" id="premium-title">BUY PREMIUM</span>
+          </div>
+          <span class="p-arrow" aria-hidden="true">›</span>
+        </button>
+      </div>
+
+      <!-- ── RIGHT COLUMN: gesture wheel ── -->
+      <div class="col-right">
+        <div class="wheel" role="img" aria-label="Gesture action map: scroll up, back, forward, switch profile, precision mode, scroll down">
+          <svg class="ring-svg" width="360" height="360" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <radialGradient id="wheelCore" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"  stop-color="rgba(124,58,237,0.35)"/>
+                <stop offset="55%" stop-color="rgba(124,58,237,0.10)"/>
+                <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+              </radialGradient>
+              <filter id="wGlow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="2.6" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+
+            <!-- core glow -->
+            <circle cx="180" cy="180" r="150" fill="url(#wheelCore)"/>
+
+            <!-- outer rune ring -->
+            <circle cx="180" cy="180" r="172" fill="none" stroke="rgba(168,85,247,0.20)" stroke-width="1" stroke-dasharray="2 8"/>
+            <circle cx="180" cy="180" r="166" fill="none" stroke="rgba(168,85,247,0.12)" stroke-width="6" stroke-dasharray="1 7"/>
+            <!-- main glowing ring -->
+            <circle cx="180" cy="180" r="156" fill="none" stroke="rgba(168,85,247,0.9)" stroke-width="2" filter="url(#wGlow)"/>
+            <!-- inner ring -->
+            <circle cx="180" cy="180" r="120" fill="none" stroke="rgba(168,85,247,0.3)" stroke-width="1" stroke-dasharray="2 6"/>
+
+            <!-- 8 spokes between inner and main ring -->
+            <g stroke="rgba(168,85,247,0.32)" stroke-width="1">
+              <line x1="180" y1="24"  x2="180" y2="60"/>
+              <line x1="180" y1="300" x2="180" y2="336"/>
+              <line x1="24"  y1="180" x2="60"  y2="180"/>
+              <line x1="300" y1="180" x2="336" y2="180"/>
+              <line x1="69"  y1="69"  x2="95"  y2="95"/>
+              <line x1="291" y1="69"  x2="265" y2="95"/>
+              <line x1="69"  y1="291" x2="95"  y2="265"/>
+              <line x1="291" y1="291" x2="265" y2="265"/>
+            </g>
+          </svg>
+
+          <!-- hero centrepiece: optional PNG, else vector mouse + emblem -->
+          <div class="hero">
+            <img class="hero-img" id="hero-img" src="../assets/art/hero.png" alt="" />
+            <div class="hero-fallback" id="hero-fallback">
+              <svg width="124" height="156" viewBox="0 0 124 156" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <defs>
+                  <linearGradient id="mouseBody" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#2a1c3d"/>
+                    <stop offset="55%" stop-color="#160e24"/>
+                    <stop offset="100%" stop-color="#0a0712"/>
+                  </linearGradient>
+                  <radialGradient id="emblemGlow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="rgba(168,85,247,0.5)"/>
+                    <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+                  </radialGradient>
+                  <radialGradient id="coreDot" cx="50%" cy="40%" r="60%">
+                    <stop offset="0%" stop-color="#f3e8ff"/>
+                    <stop offset="45%" stop-color="#c084fc"/>
+                    <stop offset="100%" stop-color="#7c3aed"/>
+                  </radialGradient>
+                </defs>
+                <!-- soft halo -->
+                <ellipse cx="62" cy="80" rx="60" ry="64" fill="url(#emblemGlow)"/>
+                <!-- gaming mouse silhouette -->
+                <g transform="translate(62 82)">
+                  <path d="M0 -56 C 32 -56 40 -24 40 10 C 40 46 24 66 0 66 C -24 66 -40 46 -40 10 C -40 -24 -32 -56 0 -56 Z"
+                        fill="url(#mouseBody)" stroke="rgba(168,85,247,0.9)" stroke-width="2"/>
+                  <!-- left/right button split -->
+                  <line x1="0" y1="-54" x2="0" y2="-12" stroke="rgba(168,85,247,0.45)" stroke-width="1.4"/>
+                  <!-- scroll wheel, lit -->
+                  <rect x="-5.5" y="-40" width="11" height="20" rx="5.5" fill="#0a0712" stroke="#c084fc" stroke-width="1.8"/>
+                  <line x1="0" y1="-37" x2="0" y2="-23" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round"/>
+                  <!-- glowing core "eye" on the palm -->
+                  <circle cx="0" cy="22" r="11" fill="url(#coreDot)" filter="url(#wGlow)"/>
+                  <circle cx="0" cy="22" r="17" fill="none" stroke="rgba(168,85,247,0.5)" stroke-width="1.2"/>
+                  <!-- left rim highlight -->
+                  <path d="M-32 -22 C -37 6 -30 42 -7 58" fill="none" stroke="rgba(192,132,252,0.55)" stroke-width="2" stroke-linecap="round"/>
+                </g>
+              </svg>
+            </div>
+          </div>
+
+          <!-- direction + action labels -->
+          <div class="w-label wl-up">
+            <span class="w-ico" aria-hidden="true">
+              <svg width="26" height="20" viewBox="0 0 26 20" fill="none" stroke="#c084fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l8-7 8 7M5 18l8-7 8 7"/></svg>
+            </span>SCROLL UP
+          </div>
+          <div class="w-label wl-down">SCROLL DOWN
+            <span class="w-ico" aria-hidden="true" style="margin-top:4px;margin-bottom:0">
+              <svg width="26" height="20" viewBox="0 0 26 20" fill="none" stroke="#c084fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2l8 7 8-7M5 9l8 7 8-7"/></svg>
+            </span>
+          </div>
+          <div class="w-label wl-back">
+            <span class="w-ico" aria-hidden="true">
+              <svg width="26" height="18" viewBox="0 0 26 18" fill="none" stroke="#c084fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3l-6 6 6 6M3 9h20"/></svg>
+            </span>BACK
+          </div>
+          <div class="w-label wl-forward">
+            <span class="w-ico" aria-hidden="true">
+              <svg width="26" height="18" viewBox="0 0 26 18" fill="none" stroke="#c084fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l6 6-6 6M23 9H3"/></svg>
+            </span>FORWARD
+          </div>
+          <div class="w-label wl-profile">
+            <span class="w-ico" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" stroke-linecap="round"/></svg>
+            </span>SWITCH<br>PROFILE
+          </div>
+          <div class="w-label wl-precision">
+            <span class="w-ico" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" fill="#c084fc" stroke="none"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4" stroke-linecap="round"/></svg>
+            </span>PRECISION<br>MODE
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!--
-    NOTE: script is NOT type="module" here.
-    Modules are deferred and execute after the frame paint cycle —
-    we want synchronous execution on DOMContentLoaded so the tab opens
-    as fast as physically possible and window.close() fires cleanly.
-  -->
   <script src="popup.js"></script>
 </body>
 </html>

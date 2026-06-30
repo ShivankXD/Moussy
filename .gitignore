@@ -1,0 +1,30 @@
+# ── AI / assistant tooling (keep private) ─────────────────────────────
+.claude/
+.claude
+CLAUDE.md
+CLAUDE.local.md
+.cursor/
+.cursorrules
+.aider*
+.continue/
+.github/copilot-instructions.md
+.mcp.json
+.windsurfrules
+
+# ── Dependencies ──────────────────────────────────────────────────────
+node_modules/
+
+# ── Logs / temp ───────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+.cache/
+tmp/
+*.tmp
+
+# ── OS / editor cruft ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp

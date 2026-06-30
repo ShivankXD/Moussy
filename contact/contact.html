@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MOUSSY // CONTACT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Inter:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#050508; --surface:#0d0d12; --surface-2:#111118;
+      --border:#2a2a3d; --border-bright:#3a3a52;
+      --purple:#a855f7; --purple-dim:#7c3aed; --purple-bright:#c084fc;
+      --glow:rgba(168,85,247,0.45);
+      --text:#ececf8; --text-dim:#a8a8cc; --text-mute:#8888ad;
+      --head:'Orbitron',sans-serif; --body:'Inter',system-ui,sans-serif; --mono:'Share Tech Mono',monospace;
+    }
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--body);-webkit-font-smoothing:antialiased}
+    body{
+      min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(168,85,247,0.10), transparent 70%),
+        linear-gradient(rgba(168,85,247,0.04) 1px,transparent 1px),
+        linear-gradient(90deg, rgba(168,85,247,0.04) 1px,transparent 1px);
+      background-size:100% 100%,30px 30px,30px 30px;
+    }
+    /* top nav */
+    .topnav{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:22px;padding:14px 22px;
+      background:rgba(8,8,12,0.7);border-bottom:1px solid var(--border);backdrop-filter:blur(6px)}
+    .brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+    .brand img{width:30px;height:30px;filter:drop-shadow(0 0 6px var(--glow))}
+    .brand .w{font-family:var(--head);font-weight:800;font-size:20px;letter-spacing:3px;
+      background:linear-gradient(90deg,#f3e8ff,var(--purple));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+    .navlink{font-family:var(--mono);font-size:12px;letter-spacing:1.5px;color:var(--text-dim);text-decoration:none;
+      padding:6px 10px;border-radius:5px;border:1px solid transparent;transition:.2s}
+    .navlink:hover{color:var(--purple-bright);border-color:var(--border-bright)}
+    .navlink.active{color:var(--purple-bright);border-color:var(--purple)}
+    /* card */
+    .card{position:relative;max-width:560px;width:100%;background:linear-gradient(180deg,var(--surface-2),var(--surface));
+      border:1px solid var(--border);border-radius:12px;padding:40px 38px;box-shadow:0 0 50px rgba(168,85,247,0.08)}
+    .card::before,.card::after{content:'';position:absolute;width:16px;height:16px;border:2px solid var(--purple);opacity:.6}
+    .card::before{top:8px;left:8px;border-right:none;border-bottom:none}
+    .card::after{bottom:8px;right:8px;border-left:none;border-top:none}
+    .kicker{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--purple);margin-bottom:8px}
+    h1{font-family:var(--head);font-weight:800;font-size:30px;letter-spacing:2px;margin-bottom:14px}
+    p.lead{color:var(--text-dim);font-size:15px;line-height:1.6;margin-bottom:26px}
+    .email-row{display:flex;align-items:center;gap:14px;padding:16px 18px;border:1px solid var(--border-bright);
+      border-radius:10px;background:rgba(168,85,247,0.06);transition:.2s}
+    .email-row:hover{border-color:var(--purple);box-shadow:0 0 18px rgba(168,85,247,0.18)}
+    .email-row svg{flex-shrink:0;color:var(--purple-bright)}
+    .email-row .lbl{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--text-mute);text-transform:uppercase}
+    .email-row a{display:block;color:var(--text);font-size:17px;font-weight:600;text-decoration:none;letter-spacing:.3px}
+    .email-row a:hover{color:var(--purple-bright)}
+    .note{margin-top:22px;font-size:13px;color:var(--text-mute);line-height:1.6}
+    .back{display:inline-flex;align-items:center;gap:8px;margin-top:28px;color:var(--purple);text-decoration:none;
+      font-family:var(--mono);font-size:12px;letter-spacing:1.5px}
+    .back:hover{color:var(--purple-bright)}
+  </style>
+</head>
+<body>
+  <nav class="topnav">
+    <div class="brand">
+      <img src="../assets/icons/icon128.png" alt="MOUSSY" />
+      <span class="w">MOUSSY</span>
+    </div>
+    <a class="navlink" href="../settings/settings.html">SETTINGS</a>
+    <a class="navlink" href="../premium/premium.html">PRICING</a>
+    <a class="navlink active" href="contact.html" aria-current="page">CONTACT</a>
+  </nav>
+
+  <main class="card">
+    <div class="kicker">// SUPPORT CHANNEL</div>
+    <h1>Contact Us</h1>
+    <p class="lead">
+      Got a complaint, a bug report, a feature request, or a question about your plan?
+      Reach out and we'll get back to you as soon as possible.
+    </p>
+
+    <div class="email-row">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>
+      </svg>
+      <div>
+        <span class="lbl">Email us</span>
+        <a href="mailto:shivankprabhudessai@gmail.com?subject=MOUSSY%20Support">shivankprabhudessai@gmail.com</a>
+      </div>
+    </div>
+
+    <p class="note">
+      For the fastest help with billing or premium activation, include your plan and a short description of the issue.
+    </p>
+
+    <a class="back" href="../settings/settings.html">‹ BACK TO SETTINGS</a>
+  </main>
+</body>
+</html>

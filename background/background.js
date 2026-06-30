@@ -14,17 +14,20 @@
  * │                                           │  captureVisibleTab      │
  * │                                           └──▶ inject download      │
  * │  settings.js ──GET_STATE────────────▶  StateManager                │
- * │  settings.js ──SET_PREMIUM──────────▶  StateManager                │
+ * │  premium.js  ──(writes moussy_plan)─▶  StateManager (derives gate)  │
  * │  background  ──PLAY_SOUND───────────▶  OffscreenManager            │
  * │                                           └──▶ offscreen.js        │
  * └─────────────────────────────────────────────────────────────────────┘
  *
  * Storage schema (chrome.storage.local)
  * ──────────────────────────────────────
- *  moussy_is_premium      : boolean          (mock gate — default false)
+ *  moussy_plan            : 'free' | 'monthly' | 'legend'  (premium gate)
  *  moussy_gesture_slots   : Array<{gesture, url}>
+ *  moussy_gesture_mode    : 'omni' | 'freehand'
  *  moussy_sound_enabled   : boolean
  *  moussy_hud_clock       : boolean
+ *  moussy_paused_global   : boolean
+ *  moussy_paused_hosts    : string[]
  *  moussy_install_date    : ISO-8601 string
  */
 
@@ -34,11 +37,13 @@
 // ── Constants
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const STORAGE_PREMIUM     = 'moussy_is_premium';
+const STORAGE_PLAN        = 'moussy_plan';            // 'free' | 'monthly' | 'legend'
 const STORAGE_SLOTS       = 'moussy_gesture_slots';
 const STORAGE_SOUND       = 'moussy_sound_enabled';
 const STORAGE_HUD         = 'moussy_hud_clock';
 const STORAGE_INSTALL     = 'moussy_install_date';
+const STORAGE_PAUSE_GLOBAL = 'moussy_paused_global';  // boolean
+const STORAGE_PAUSE_HOSTS  = 'moussy_paused_hosts';   // string[]
 
 const OFFSCREEN_URL       = 'offscreen/offscreen.html';
 // NOTE: chrome.offscreen.Reason.AUDIO_PLAYBACK is used directly in createDocument().
@@ -100,6 +105,25 @@ async function getActiveTab() {
 }
 
 /**
+ * Whether the gesture engine is paused for a given tab — global pause, or the
+ * tab's hostname is in the per-host pause list. This is the authoritative gate:
+ * even if a tab's content script is running a stale pause cache, the background
+ * refuses to execute the navigation here.
+ * @param {chrome.tabs.Tab} tab
+ * @returns {Promise<boolean>}
+ */
+async function isTabPaused(tab) {
+  const data   = await storageGet([STORAGE_PAUSE_GLOBAL, STORAGE_PAUSE_HOSTS]);
+  if (data[STORAGE_PAUSE_GLOBAL] === true) return true;
+  const hosts  = Array.isArray(data[STORAGE_PAUSE_HOSTS]) ? data[STORAGE_PAUSE_HOSTS] : [];
+  try {
+    return hosts.includes(new URL(tab.url).hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Send a fire-and-forget message to a tab's content script.
  * Silently swallows errors (tab may have navigated away).
  * @param {number} tabId
@@ -117,27 +141,39 @@ async function sendToTab(tabId, message) {
 // ── State Manager
 // ═══════════════════════════════════════════════════════════════════════════════
 /**
- * Thin wrapper around chrome.storage.local for the global isPremium flag.
- * During development, flip this via settings.js → SET_PREMIUM message.
+ * Thin wrapper around chrome.storage.local for the premium gate.
+ *
+ * The single source of truth is `moussy_plan` ('free'|'monthly'|'legend'),
+ * written by premium.js / settings.js. `isPremium` is derived from it, so the
+ * background gate and the purchase flow can never drift out of sync.
  */
 const StateManager = {
-  async isPremium() {
-    const data = await storageGet(STORAGE_PREMIUM);
-    return data[STORAGE_PREMIUM] === true;
+  async getPlan() {
+    const data = await storageGet(STORAGE_PLAN);
+    return data[STORAGE_PLAN] ?? 'free';
   },
 
-  async setPremium(value) {
-    await storageSet({ [STORAGE_PREMIUM]: Boolean(value) });
-    console.log(`[MOUSSY] isPremium set to: ${value}`);
+  async isPremium() {
+    const plan = await this.getPlan();
+    return plan === 'monthly' || plan === 'legend';
+  },
+
+  /** Set the active plan (dev/testing helper). */
+  async setPlan(plan) {
+    const valid = plan === 'monthly' || plan === 'legend' ? plan : 'free';
+    await storageSet({ [STORAGE_PLAN]: valid });
+    console.log(`[MOUSSY] plan set to: ${valid}`);
   },
 
   async getFullState() {
     return storageGet([
-      STORAGE_PREMIUM,
+      STORAGE_PLAN,
       STORAGE_SLOTS,
       STORAGE_SOUND,
       STORAGE_HUD,
       STORAGE_INSTALL,
+      STORAGE_PAUSE_GLOBAL,
+      STORAGE_PAUSE_HOSTS,
     ]);
   },
 };
@@ -515,8 +551,20 @@ async function handleMessage(message, sender) {
         return { ok: false, reason: 'Extension page — skipped' };
       }
 
+      // Authoritative pause gate (mirrors content.js PauseState)
+      if (await isTabPaused(tab)) {
+        return { ok: false, reason: 'PAUSED' };
+      }
+
       await GestureRouter.route(direction, tab);
       return { ok: true, direction };
+    }
+
+    // ── Show the upgrade toast (premium-locked radial slot) ──────────────
+    case 'SHOW_UPGRADE': {
+      const tabId = sender.tab?.id;
+      if (tabId) await UpgradeNotifier.showInTab(tabId);
+      return { ok: true };
     }
 
     // ── Premium screenshot request ────────────────────────────────────────
@@ -543,11 +591,11 @@ async function handleMessage(message, sender) {
       return { ok: true, state };
     }
 
-    // ── Toggle isPremium (dev/testing only) ───────────────────────────────
-    case 'SET_PREMIUM': {
-      const value = Boolean(payload?.value);
-      await StateManager.setPremium(value);
-      return { ok: true, isPremium: value };
+    // ── Set active plan (dev/testing only) ────────────────────────────────
+    case 'SET_PLAN': {
+      await StateManager.setPlan(payload?.plan);
+      const isPremium = await StateManager.isPremium();
+      return { ok: true, plan: await StateManager.getPlan(), isPremium };
     }
 
     // ── Manual sound trigger (e.g. from settings preview button) ─────────
@@ -578,25 +626,33 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
   if (reason === 'install') {
     // ── First install: seed default storage values ─────────────────────
     await storageSet({
-      [STORAGE_PREMIUM]:  false,   // always starts on free tier
-      [STORAGE_SLOTS]:    Array.from({ length: 6 }, () => ({ gesture: '', url: '' })),
-      [STORAGE_SOUND]:    false,
-      [STORAGE_HUD]:      false,
-      [STORAGE_INSTALL]:  new Date().toISOString(),
+      [STORAGE_PLAN]:          'free',   // always starts on free tier
+      // 5 radial URL slots (Slot 1..5 → N, NE, SE, SW, NW). Slot 1 seeded so
+      // the dial works out of the box; Slots 2-5 are premium-locked until upgrade.
+      [STORAGE_SLOTS]:         [
+        { url: 'https://www.wikipedia.org' },
+        { url: '' }, { url: '' }, { url: '' }, { url: '' },
+      ],
+      [STORAGE_SOUND]:         false,
+      [STORAGE_HUD]:           false,
+      [STORAGE_PAUSE_GLOBAL]:  false,
+      [STORAGE_PAUSE_HOSTS]:   [],
+      [STORAGE_INSTALL]:       new Date().toISOString(),
     });
 
-    console.log('[MOUSSY] Default storage seeded. isPremium = false (free tier).');
+    console.log('[MOUSSY] Default storage seeded. plan = free.');
 
     // Open the settings page on first install so the user sees the UI immediately
     chrome.tabs.create({ url: chrome.runtime.getURL('settings/settings.html') });
 
   } else if (reason === 'update') {
     // ── Update: migrate storage keys if needed (future-proofing) ──────
-    const existing = await storageGet(STORAGE_PREMIUM);
-    if (existing[STORAGE_PREMIUM] === undefined) {
-      // Field didn't exist in old version — seed it
-      await storageSet({ [STORAGE_PREMIUM]: false });
-    }
+    const existing = await storageGet([STORAGE_PLAN, STORAGE_PAUSE_GLOBAL, STORAGE_PAUSE_HOSTS]);
+    const seed = {};
+    if (existing[STORAGE_PLAN]         === undefined) seed[STORAGE_PLAN]         = 'free';
+    if (existing[STORAGE_PAUSE_GLOBAL] === undefined) seed[STORAGE_PAUSE_GLOBAL] = false;
+    if (existing[STORAGE_PAUSE_HOSTS]  === undefined) seed[STORAGE_PAUSE_HOSTS]  = [];
+    if (Object.keys(seed).length) await storageSet(seed);
     console.log(`[MOUSSY] Updated from ${previousVersion}. Storage migration complete.`);
   }
 });

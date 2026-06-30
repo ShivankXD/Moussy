@@ -1,77 +1,163 @@
 /**
- * MOUSSY — Launch Bridge  (popup.js)
+ * MOUSSY — Control Panel  (popup.js)
  * ════════════════════════════════════
- * Execution flow
- * ──────────────
- *  1. DOMContentLoaded fires  (popup.html is parsed)
- *  2. chrome.tabs.create()    (opens settings.html in a brand-new foreground tab)
- *  3. window.close()          (destroys the popup window immediately after)
+ * Drives the toolbar popup (popup.html). Responsibilities:
+ *   • Reflect + persist the two pause states (per-site and global)
+ *   • Launch the SETTINGS page and the BUY PREMIUM page in new tabs
+ *   • Reflect the current plan on the premium banner
  *
- * The result feels like the extension icon is a direct launcher button —
- * no cramped dropdown, no secondary click required.
+ * Persistence
+ * ───────────
+ * Everything is stored in chrome.storage.local — the single source of truth
+ * shared with background.js and content.js:
+ *   moussy_paused_global : boolean              (gestures off everywhere)
+ *   moussy_paused_hosts  : string[]             (hostnames with gestures off)
+ *   moussy_plan          : 'free'|'monthly'|'legend'
  *
- * Why NOT type="module"?
- * ───────────────────────
- * ES module scripts are deferred: they execute AFTER the browser has finished
- * parsing AND rendering the first frame. That adds a visible delay before the
- * tab opens. Using a classic script (loaded synchronously at end of <body>)
- * fires as early as possible, minimising the popup-visible window to ~1 frame.
- *
- * Why chrome.tabs.create instead of chrome.runtime.openOptionsPage?
- * ───────────────────────────────────────────────────────────────────
- * openOptionsPage() targets the file declared under "options_ui" in the manifest.
- * We are bypassing the Options page convention entirely and routing directly to
- * our custom settings panel — giving us full control over the URL and tab behaviour.
- *
- * Fallback safety
- * ────────────────
- * If the chrome.tabs API is somehow unavailable (e.g., running as a plain HTML
- * file during dev), we fall back to window.open() so the page still opens.
+ * content.js watches storage.onChanged for these keys, so toggling here takes
+ * effect on open tabs immediately — no reload required.
  */
 
 'use strict';
 
-(function launch() {
-  /**
-   * Resolve the extension-internal URL for the settings panel.
-   * chrome.runtime.getURL() returns something like:
-   *   chrome-extension://<id>/settings/settings.html
-   */
-  const SETTINGS_URL = chrome.runtime.getURL('settings/settings.html');
+const KEY_GLOBAL = 'moussy_paused_global';
+const KEY_HOSTS  = 'moussy_paused_hosts';
+const KEY_PLAN   = 'moussy_plan';
 
-  /**
-   * Open the settings panel in a new, active foreground tab.
-   * Then immediately close the popup window so the user sees nothing
-   * but the settings page snapping into view.
-   */
-  function openSettingsTab() {
-    if (chrome?.tabs?.create) {
-      // Primary path: use the tabs API (tabs permission is declared in manifest)
-      chrome.tabs.create(
-        {
-          url:    SETTINGS_URL,
-          active: true,    // bring the new tab into focus immediately
-        },
-        () => {
-          // Close the popup as soon as the tab creation callback fires.
-          // This is the earliest safe moment — the tab has been registered
-          // with the browser even if it hasn't fully loaded yet.
-          window.close();
-        }
-      );
-    } else {
-      // Fallback: plain window.open for dev/testing outside extension context
-      window.open(SETTINGS_URL, '_blank');
-      window.close();
-    }
+const runtimeURL = (path) =>
+  (typeof chrome !== 'undefined' && chrome?.runtime?.getURL)
+    ? chrome.runtime.getURL(path)
+    : path;
+const SETTINGS_URL = runtimeURL('settings/settings.html');
+const PREMIUM_URL  = runtimeURL('premium/premium.html');
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const els = {
+  toggleSite:    document.getElementById('toggle-site'),
+  toggleAll:     document.getElementById('toggle-all'),
+  rowSite:       document.getElementById('row-site'),
+  siteHost:      document.getElementById('site-host'),
+  btnSettings:   document.getElementById('btn-settings'),
+  btnPremium:    document.getElementById('btn-premium'),
+  premiumKicker: document.getElementById('premium-kicker'),
+  premiumTitle:  document.getElementById('premium-title'),
+  btnMin:        document.getElementById('btn-min'),
+  btnClose:      document.getElementById('btn-close'),
+  heroImg:       document.getElementById('hero-img'),
+  heroFallback:  document.getElementById('hero-fallback'),
+};
+
+// ── Storage helpers ───────────────────────────────────────────────────────────
+// Fall back to a no-op store when running outside the extension (standalone
+// preview / design review) so the panel still renders without throwing.
+const hasStorage = typeof chrome !== 'undefined' && chrome?.storage?.local;
+const get = (keys) => hasStorage
+  ? new Promise((res) => chrome.storage.local.get(keys, res))
+  : Promise.resolve({});
+const set = (items) => hasStorage
+  ? new Promise((res) => chrome.storage.local.set(items, res))
+  : Promise.resolve();
+
+/** Resolve the active tab and its hostname (null if not an http(s) page). */
+async function getActiveHost() {
+  try {
+    if (typeof chrome === 'undefined' || !chrome?.tabs?.query) return null;
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.url) return null;
+    const u = new URL(tab.url);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return u.hostname;
+  } catch {
+    return null;
   }
+}
 
-  // Execute as soon as the DOM is ready.
-  // Because this script is loaded at the end of <body> (not deferred / module),
-  // DOMContentLoaded may already have fired — so we check readyState first.
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', openSettingsTab, { once: true });
+// ── State ─────────────────────────────────────────────────────────────────────
+let host = null;   // current tab hostname, or null if gestures can't run here
+
+// ── Render ────────────────────────────────────────────────────────────────────
+/** Show the optional hero PNG once it loads; otherwise keep the vector fallback. */
+function initHero() {
+  if (!els.heroImg) return;
+  els.heroImg.addEventListener('load', () => {
+    if (els.heroImg.naturalWidth === 0) return;   // broken/empty image
+    els.heroImg.classList.add('loaded');
+    els.heroFallback?.classList.add('hidden');
+  });
+  els.heroImg.addEventListener('error', () => {
+    // No hero.png supplied — the vector fallback stays visible.
+    els.heroImg.remove();
+  });
+}
+
+function renderPremium(plan) {
+  const paid = plan === 'monthly' || plan === 'legend';
+  els.btnPremium.classList.toggle('is-active', paid);
+  if (paid) {
+    els.premiumKicker.textContent = 'Active subscription';
+    els.premiumTitle.textContent = plan === 'legend' ? 'LEGEND STATUS' : 'MONTHLY PASS';
   } else {
-    openSettingsTab();
+    els.premiumKicker.textContent = 'Need more functionalities?';
+    els.premiumTitle.textContent = 'BUY PREMIUM';
   }
-})();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  host = await getActiveHost();
+
+  const data = await get([KEY_GLOBAL, KEY_HOSTS, KEY_PLAN]);
+  const global = data[KEY_GLOBAL] === true;
+  const hosts  = Array.isArray(data[KEY_HOSTS]) ? data[KEY_HOSTS] : [];
+  const plan   = data[KEY_PLAN] ?? 'free';
+
+  // Per-site toggle
+  if (host) {
+    els.siteHost.textContent = host;
+    els.toggleSite.checked = hosts.includes(host);
+  } else {
+    els.siteHost.textContent = 'Not available on this page';
+    els.toggleSite.checked = false;
+    els.rowSite.classList.add('is-disabled');
+    els.toggleSite.disabled = true;
+  }
+
+  // Global toggle
+  els.toggleAll.checked = global;
+
+  initHero();
+  renderPremium(plan);
+  bindEvents();
+}
+
+// ── Events ────────────────────────────────────────────────────────────────────
+function bindEvents() {
+  els.toggleSite.addEventListener('change', async () => {
+    if (!host) return;
+    const data = await get(KEY_HOSTS);
+    const hosts = new Set(Array.isArray(data[KEY_HOSTS]) ? data[KEY_HOSTS] : []);
+    if (els.toggleSite.checked) hosts.add(host);
+    else hosts.delete(host);
+    await set({ [KEY_HOSTS]: [...hosts] });
+  });
+
+  els.toggleAll.addEventListener('change', async () => {
+    await set({ [KEY_GLOBAL]: els.toggleAll.checked });
+  });
+
+  els.btnSettings.addEventListener('click', () => openTab(SETTINGS_URL));
+  els.btnPremium.addEventListener('click', () => openTab(PREMIUM_URL));
+  els.btnClose?.addEventListener('click', () => window.close());
+  els.btnMin?.addEventListener('click', () => window.close());
+}
+
+/** Open an extension page in a new foreground tab, then close the popup. */
+function openTab(url) {
+  if (chrome?.tabs?.create) {
+    chrome.tabs.create({ url, active: true }, () => window.close());
+  } else {
+    window.open(url, '_blank');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);

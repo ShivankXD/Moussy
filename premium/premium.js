@@ -14,7 +14,7 @@
  * Replace the `PAYMENT_URLS` map with real Stripe / payment-processor
  * checkout links. The `handlePurchase()` function is the single hook point.
  *
- * Storage schema (chrome.storage.sync)
+ * Storage schema (chrome.storage.local)
  * ──────────────────────────────────────
  *  {
  *    moussy_plan:          'free' | 'monthly' | 'legend',
@@ -70,14 +70,14 @@ let currentPlan = 'free';
 
 // ─── Storage Adapter ──────────────────────────────────────────────────────────
 /**
- * Wraps chrome.storage.sync with a Promise API.
+ * Wraps chrome.storage.local with a Promise API.
  * Falls back to localStorage when running outside an extension context
  * (e.g., during standalone development / design review).
  */
 const Storage = {
   async get(keys) {
-    if (typeof chrome !== 'undefined' && chrome?.storage?.sync) {
-      return new Promise((resolve) => chrome.storage.sync.get(keys, resolve));
+    if (typeof chrome !== 'undefined' && chrome?.storage?.local) {
+      return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
     }
     // Fallback: localStorage
     const result = {};
@@ -88,8 +88,8 @@ const Storage = {
   },
 
   async set(items) {
-    if (typeof chrome !== 'undefined' && chrome?.storage?.sync) {
-      return new Promise((resolve) => chrome.storage.sync.set(items, resolve));
+    if (typeof chrome !== 'undefined' && chrome?.storage?.local) {
+      return new Promise((resolve) => chrome.storage.local.set(items, resolve));
     }
     for (const [k, v] of Object.entries(items)) {
       localStorage.setItem(k, JSON.stringify(v));
@@ -296,18 +296,28 @@ function bindButtons() {
       const plan = btn.dataset.plan;
 
       if (plan === 'free') {
-        // Downgrade / current plan — no payment needed
         if (currentPlan === 'free') {
           showToast('// FREE ENGINE is already your active config.');
         } else {
-          showToast('Downgrade available via your account settings.', 4000);
+          await activatePlan('free');
+          showToast('// Reverted to FREE ENGINE.');
         }
         return;
       }
 
+      if (plan === currentPlan) {
+        showToast(`// ${PLANS[plan].label} is already active.`);
+        return;
+      }
+
+      // Activate the plan directly (mock — wire PAYMENT_URLS for real checkout).
       const theme = plan === 'legend' ? 'gold' : 'purple';
       spawnParticles(btn, theme);
-      await handlePurchase(plan, btn);
+      btn.classList.add('loading');
+      await new Promise((r) => setTimeout(r, 700));
+      await activatePlan(plan);
+      btn.classList.remove('loading');
+      showToast(`✓ ${PLANS[plan].label} activated — premium slots unlocked.`, 4000);
     });
   });
 }

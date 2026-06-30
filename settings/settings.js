@@ -5,7 +5,7 @@
  *
  * Responsibilities
  * ─────────────────
- *  • StorageAdapter     — chrome.storage.sync wrapper with localStorage fallback
+ *  • StorageAdapter     — chrome.storage.local wrapper with localStorage fallback
  *  • PlanManager        — loads current plan and gates locked elements accordingly
  *  • SlotManager        — loads/saves gesture slot data (gesture type + URL)
  *  • ToggleManager      — loads/saves premium feature toggle states
@@ -15,7 +15,7 @@
  *  • NavHighlighter     — highlights active sidebar link on scroll
  *  • ToastManager       — non-blocking notification system
  *
- * Storage schema  (chrome.storage.sync)
+ * Storage schema  (chrome.storage.local)
  * ──────────────────────────────────────
  *  moussy_plan              : 'free' | 'monthly' | 'legend'
  *  moussy_gesture_slots     : Array<{ gesture: string, url: string }>  (length 6)
@@ -28,8 +28,8 @@
 // ─── Storage Adapter ──────────────────────────────────────────────────────────
 const Storage = {
   async get(keys) {
-    if (typeof chrome !== 'undefined' && chrome?.storage?.sync) {
-      return new Promise((res) => chrome.storage.sync.get(keys, res));
+    if (typeof chrome !== 'undefined' && chrome?.storage?.local) {
+      return new Promise((res) => chrome.storage.local.get(keys, res));
     }
     const result = {};
     for (const k of (Array.isArray(keys) ? keys : [keys])) {
@@ -40,8 +40,8 @@ const Storage = {
   },
 
   async set(items) {
-    if (typeof chrome !== 'undefined' && chrome?.storage?.sync) {
-      return new Promise((res) => chrome.storage.sync.set(items, res));
+    if (typeof chrome !== 'undefined' && chrome?.storage?.local) {
+      return new Promise((res) => chrome.storage.local.set(items, res));
     }
     for (const [k, v] of Object.entries(items)) {
       localStorage.setItem(k, JSON.stringify(v));
@@ -55,14 +55,14 @@ const STORAGE_SLOTS       = 'moussy_gesture_slots';
 const STORAGE_HUD         = 'moussy_hud_clock';
 const STORAGE_SOUND       = 'moussy_sound_enabled';   // must match background.js key
 
-const TOTAL_SLOTS         = 6;
-const FREE_SLOT_LIMIT     = 2;   // slots unlocked for free tier
+const TOTAL_SLOTS         = 5;   // radial URL slots (Slot 1..5 → N, NE, SE, SW, NW)
+const FREE_SLOT_LIMIT     = 1;   // only Slot 1 (North) is free
 
 /** How many slots a given plan can use */
 const PLAN_SLOT_LIMITS = {
-  free:    2,
-  monthly: 6,
-  legend:  6,
+  free:    1,
+  monthly: 5,
+  legend:  5,
 };
 
 // ─── State ────────────────────────────────────────────────────────────────────

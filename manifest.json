@@ -57,21 +57,14 @@
         "assets/sounds/*.mp3",
         "assets/sounds/*.ogg",
         "assets/icons/*.png",
-        "offscreen/offscreen.html",
-        "settings/settings.html",
-        "settings/settings.js",
-        "premium/premium.html",
-        "premium/premium.js",
-        "popup/popup.html",
-        "popup/popup.js",
-        "popup/popup.css"
+        "premium/premium.html"
       ],
       "matches": ["<all_urls>"]
     }
   ],
 
   "options_ui": {
-    "page": "options/options.html",
+    "page": "settings/settings.html",
     "open_in_tab": true
   },
 
