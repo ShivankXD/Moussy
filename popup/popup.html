@@ -4,14 +4,10 @@
   <meta charset="UTF-8" />
   <title>MOUSSY — Control Panel</title>
   <!--
-    MOUSSY — Control Panel Popup (key-art layout)
-    ═════════════════════════════════════════════
+    MOUSSY — Control Panel Popup
+    ════════════════════════════
     Two-column HUD: brand + pause toggles + SETTINGS + BUY PREMIUM on the left,
-    the segmented gesture wheel with a hero centrepiece on the right.
-
-    Hero art: drop a transparent PNG at assets/art/hero.png and it is shown in
-    the wheel centre; otherwise the vector mouse/emblem fallback is used.
-
+    the hero dial art (assets/art/hero.png) on the right.
     CSP: extension pages forbid inline scripts/handlers — behaviour is in popup.js.
   -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -26,11 +22,8 @@
     <span class="corner bl" aria-hidden="true"></span>
     <span class="corner br" aria-hidden="true"></span>
 
-    <!-- window controls -->
+    <!-- window control (close only) -->
     <div class="window-controls">
-      <button class="win-btn" id="btn-min" type="button" title="Minimize" aria-label="Minimize">
-        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-      </button>
       <button class="win-btn" id="btn-close" type="button" title="Close" aria-label="Close">
         <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
@@ -40,7 +33,7 @@
       <!-- ── LEFT COLUMN ── -->
       <div class="col-left">
         <header class="brand">
-          <img class="brand-logo" src="../assets/icons/icon128.png" alt="MOUSSY logo" />
+          <img class="brand-logo" src="../assets/icons/decepticon-icon.png" alt="MOUSSY logo" />
           <div class="brand-text">
             <div class="brand-word">MOUSSY</div>
             <div class="brand-sub">CONTROL. POWER. PRECISION.</div>
@@ -100,120 +93,9 @@
         </button>
       </div>
 
-      <!-- ── RIGHT COLUMN: gesture wheel ── -->
+      <!-- ── RIGHT COLUMN: hero dial art ── -->
       <div class="col-right">
-        <div class="wheel" role="img" aria-label="Gesture action map: scroll up, back, forward, switch profile, precision mode, scroll down">
-          <svg class="ring-svg" width="360" height="360" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <defs>
-              <radialGradient id="wheelCore" cx="50%" cy="50%" r="50%">
-                <stop offset="0%"  stop-color="rgba(124,58,237,0.35)"/>
-                <stop offset="55%" stop-color="rgba(124,58,237,0.10)"/>
-                <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
-              </radialGradient>
-              <filter id="wGlow" x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="2.6" result="b"/>
-                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-            </defs>
-
-            <!-- core glow -->
-            <circle cx="180" cy="180" r="150" fill="url(#wheelCore)"/>
-
-            <!-- outer rune ring -->
-            <circle cx="180" cy="180" r="172" fill="none" stroke="rgba(168,85,247,0.20)" stroke-width="1" stroke-dasharray="2 8"/>
-            <circle cx="180" cy="180" r="166" fill="none" stroke="rgba(168,85,247,0.12)" stroke-width="6" stroke-dasharray="1 7"/>
-            <!-- main glowing ring -->
-            <circle cx="180" cy="180" r="156" fill="none" stroke="rgba(168,85,247,0.9)" stroke-width="2" filter="url(#wGlow)"/>
-            <!-- inner ring -->
-            <circle cx="180" cy="180" r="120" fill="none" stroke="rgba(168,85,247,0.3)" stroke-width="1" stroke-dasharray="2 6"/>
-
-            <!-- 8 spokes between inner and main ring -->
-            <g stroke="rgba(168,85,247,0.32)" stroke-width="1">
-              <line x1="180" y1="24"  x2="180" y2="60"/>
-              <line x1="180" y1="300" x2="180" y2="336"/>
-              <line x1="24"  y1="180" x2="60"  y2="180"/>
-              <line x1="300" y1="180" x2="336" y2="180"/>
-              <line x1="69"  y1="69"  x2="95"  y2="95"/>
-              <line x1="291" y1="69"  x2="265" y2="95"/>
-              <line x1="69"  y1="291" x2="95"  y2="265"/>
-              <line x1="291" y1="291" x2="265" y2="265"/>
-            </g>
-          </svg>
-
-          <!-- hero centrepiece: optional PNG, else vector mouse + emblem -->
-          <div class="hero">
-            <img class="hero-img" id="hero-img" src="../assets/art/hero.png" alt="" />
-            <div class="hero-fallback" id="hero-fallback">
-              <svg width="124" height="156" viewBox="0 0 124 156" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <defs>
-                  <linearGradient id="mouseBody" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#2a1c3d"/>
-                    <stop offset="55%" stop-color="#160e24"/>
-                    <stop offset="100%" stop-color="#0a0712"/>
-                  </linearGradient>
-                  <radialGradient id="emblemGlow" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stop-color="rgba(168,85,247,0.5)"/>
-                    <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
-                  </radialGradient>
-                  <radialGradient id="coreDot" cx="50%" cy="40%" r="60%">
-                    <stop offset="0%" stop-color="#f3e8ff"/>
-                    <stop offset="45%" stop-color="#c084fc"/>
-                    <stop offset="100%" stop-color="#7c3aed"/>
-                  </radialGradient>
-                </defs>
-                <!-- soft halo -->
-                <ellipse cx="62" cy="80" rx="60" ry="64" fill="url(#emblemGlow)"/>
-                <!-- gaming mouse silhouette -->
-                <g transform="translate(62 82)">
-                  <path d="M0 -56 C 32 -56 40 -24 40 10 C 40 46 24 66 0 66 C -24 66 -40 46 -40 10 C -40 -24 -32 -56 0 -56 Z"
-                        fill="url(#mouseBody)" stroke="rgba(168,85,247,0.9)" stroke-width="2"/>
-                  <!-- left/right button split -->
-                  <line x1="0" y1="-54" x2="0" y2="-12" stroke="rgba(168,85,247,0.45)" stroke-width="1.4"/>
-                  <!-- scroll wheel, lit -->
-                  <rect x="-5.5" y="-40" width="11" height="20" rx="5.5" fill="#0a0712" stroke="#c084fc" stroke-width="1.8"/>
-                  <line x1="0" y1="-37" x2="0" y2="-23" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round"/>
-                  <!-- glowing core "eye" on the palm -->
-                  <circle cx="0" cy="22" r="11" fill="url(#coreDot)" filter="url(#wGlow)"/>
-                  <circle cx="0" cy="22" r="17" fill="none" stroke="rgba(168,85,247,0.5)" stroke-width="1.2"/>
-                  <!-- left rim highlight -->
-                  <path d="M-32 -22 C -37 6 -30 42 -7 58" fill="none" stroke="rgba(192,132,252,0.55)" stroke-width="2" stroke-linecap="round"/>
-                </g>
-              </svg>
-            </div>
-          </div>
-
-          <!-- direction + action labels -->
-          <div class="w-label wl-up">
-            <span class="w-ico" aria-hidden="true">
-              <svg width="26" height="20" viewBox="0 0 26 20" fill="none" stroke="#c084fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l8-7 8 7M5 18l8-7 8 7"/></svg>
-            </span>SCROLL UP
-          </div>
-          <div class="w-label wl-down">SCROLL DOWN
-            <span class="w-ico" aria-hidden="true" style="margin-top:4px;margin-bottom:0">
-              <svg width="26" height="20" viewBox="0 0 26 20" fill="none" stroke="#c084fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2l8 7 8-7M5 9l8 7 8-7"/></svg>
-            </span>
-          </div>
-          <div class="w-label wl-back">
-            <span class="w-ico" aria-hidden="true">
-              <svg width="26" height="18" viewBox="0 0 26 18" fill="none" stroke="#c084fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3l-6 6 6 6M3 9h20"/></svg>
-            </span>BACK
-          </div>
-          <div class="w-label wl-forward">
-            <span class="w-ico" aria-hidden="true">
-              <svg width="26" height="18" viewBox="0 0 26 18" fill="none" stroke="#c084fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l6 6-6 6M23 9H3"/></svg>
-            </span>FORWARD
-          </div>
-          <div class="w-label wl-profile">
-            <span class="w-ico" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" stroke-linecap="round"/></svg>
-            </span>SWITCH<br>PROFILE
-          </div>
-          <div class="w-label wl-precision">
-            <span class="w-ico" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" fill="#c084fc" stroke="none"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4" stroke-linecap="round"/></svg>
-            </span>PRECISION<br>MODE
-          </div>
-        </div>
+        <img class="hero-img" id="hero-img" src="../assets/art/hero.png" alt="MOUSSY radial dial" />
       </div>
     </div>
   </div>

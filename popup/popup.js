@@ -41,10 +41,8 @@ const els = {
   btnPremium:    document.getElementById('btn-premium'),
   premiumKicker: document.getElementById('premium-kicker'),
   premiumTitle:  document.getElementById('premium-title'),
-  btnMin:        document.getElementById('btn-min'),
   btnClose:      document.getElementById('btn-close'),
   heroImg:       document.getElementById('hero-img'),
-  heroFallback:  document.getElementById('hero-fallback'),
 };
 
 // ── Storage helpers ───────────────────────────────────────────────────────────
@@ -78,16 +76,9 @@ let host = null;   // current tab hostname, or null if gestures can't run here
 // ── Render ────────────────────────────────────────────────────────────────────
 /** Show the optional hero PNG once it loads; otherwise keep the vector fallback. */
 function initHero() {
-  if (!els.heroImg) return;
-  els.heroImg.addEventListener('load', () => {
-    if (els.heroImg.naturalWidth === 0) return;   // broken/empty image
-    els.heroImg.classList.add('loaded');
-    els.heroFallback?.classList.add('hidden');
-  });
-  els.heroImg.addEventListener('error', () => {
-    // No hero.png supplied — the vector fallback stays visible.
-    els.heroImg.remove();
-  });
+  // If assets/art/hero.png is missing, hide the broken image so the dark
+  // column shows cleanly instead of a broken-image glyph.
+  els.heroImg?.addEventListener('error', () => { els.heroImg.style.display = 'none'; });
 }
 
 function renderPremium(plan) {
@@ -148,7 +139,6 @@ function bindEvents() {
   els.btnSettings.addEventListener('click', () => openTab(SETTINGS_URL));
   els.btnPremium.addEventListener('click', () => openTab(PREMIUM_URL));
   els.btnClose?.addEventListener('click', () => window.close());
-  els.btnMin?.addEventListener('click', () => window.close());
 }
 
 /** Open an extension page in a new foreground tab, then close the popup. */

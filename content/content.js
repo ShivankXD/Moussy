@@ -41,7 +41,7 @@ const CFG = Object.freeze({
   D:          280,   // SVG box size (px)
   RING_OUT:   120,   // outer ring radius
   RING_IN:    86,    // inner / dead-zone radius — large hole = thin ring band
-  ICON_R:     103,   // radius at which wedge icons sit (inside the thin band)
+  ICON_R:     92,    // radius at which wedge icons sit (tucked inside the band)
   DEAD_ZONE:  64,    // px the cursor must travel before a wedge is selectable
 
   APPEAR_MS:  150,
@@ -58,9 +58,11 @@ const CFG = Object.freeze({
   STORAGE_PAUSE_HOSTS:  'moussy_paused_hosts',
   STORAGE_SIZE:         'moussy_dial_size',      // scale multiplier (~0.5..1.6)
   STORAGE_OPACITY:      'moussy_dial_opacity',   // band fill alpha (0..1)
+  STORAGE_DELAY:        'moussy_dial_delay',     // hold-to-open delay (ms)
 
   DEFAULT_SIZE:         0.82,   // a touch smaller than base
   DEFAULT_OPACITY:      0.55,   // violet/black band mix
+  DEFAULT_DELAY:        500,    // ms of right-hold before the dial opens
 });
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -76,13 +78,14 @@ const Store = (() => {
   let _pauseHosts  = [];
   let _size    = CFG.DEFAULT_SIZE;
   let _opacity = CFG.DEFAULT_OPACITY;
+  let _delay   = CFG.DEFAULT_DELAY;
   const _host = (() => { try { return location.hostname; } catch { return ''; } })();
 
   (async () => {
     try {
       const d = await chrome.storage.local.get([
         CFG.STORAGE_SLOTS, CFG.STORAGE_PLAN, CFG.STORAGE_PAUSE_GLOBAL, CFG.STORAGE_PAUSE_HOSTS,
-        CFG.STORAGE_SIZE, CFG.STORAGE_OPACITY,
+        CFG.STORAGE_SIZE, CFG.STORAGE_OPACITY, CFG.STORAGE_DELAY,
       ]);
       setSlots(d[CFG.STORAGE_SLOTS]);
       _plan        = d[CFG.STORAGE_PLAN] ?? 'free';
@@ -90,6 +93,7 @@ const Store = (() => {
       _pauseHosts  = Array.isArray(d[CFG.STORAGE_PAUSE_HOSTS]) ? d[CFG.STORAGE_PAUSE_HOSTS] : [];
       if (typeof d[CFG.STORAGE_SIZE]    === 'number') _size    = d[CFG.STORAGE_SIZE];
       if (typeof d[CFG.STORAGE_OPACITY] === 'number') _opacity = d[CFG.STORAGE_OPACITY];
+      if (typeof d[CFG.STORAGE_DELAY]   === 'number') _delay   = d[CFG.STORAGE_DELAY];
     } catch (_) { /* chrome:// or invalidated context */ }
   })();
 
@@ -104,6 +108,7 @@ const Store = (() => {
     isPaused()     { return _pauseGlobal || _pauseHosts.includes(_host); },
     dialSize()     { return clamp(_size, 0.5, 1.6); },
     dialOpacity()  { return clamp(_opacity, 0, 1); },
+    dialDelay()    { return clamp(_delay, 0, 3000); },
     _onChange(changes) {
       if (CFG.STORAGE_SLOTS in changes)        setSlots(changes[CFG.STORAGE_SLOTS].newValue);
       if (CFG.STORAGE_PLAN in changes)         _plan = changes[CFG.STORAGE_PLAN].newValue ?? 'free';
@@ -111,6 +116,7 @@ const Store = (() => {
       if (CFG.STORAGE_PAUSE_HOSTS in changes)  _pauseHosts = Array.isArray(changes[CFG.STORAGE_PAUSE_HOSTS].newValue) ? changes[CFG.STORAGE_PAUSE_HOSTS].newValue : [];
       if (CFG.STORAGE_SIZE in changes    && typeof changes[CFG.STORAGE_SIZE].newValue === 'number')    _size = changes[CFG.STORAGE_SIZE].newValue;
       if (CFG.STORAGE_OPACITY in changes && typeof changes[CFG.STORAGE_OPACITY].newValue === 'number') _opacity = changes[CFG.STORAGE_OPACITY].newValue;
+      if (CFG.STORAGE_DELAY in changes   && typeof changes[CFG.STORAGE_DELAY].newValue === 'number')   _delay = changes[CFG.STORAGE_DELAY].newValue;
     },
   };
 })();
@@ -265,6 +271,10 @@ class RadialDialHUD {
   track(dx, dy) {
     if (!this._host) return false;   // returns true if selection CHANGED
     const dist = Math.hypot(dx, dy);
+
+    // radius tether always follows the cursor
+    this._setTether(dx, dy, dist);
+
     let idx = -1;
     if (dist >= this.dim.dead) {
       const ang = Math.atan2(dy, dx) * 180 / Math.PI;   // -180..180, 0 = right
@@ -276,6 +286,20 @@ class RadialDialHUD {
     this._wedgeEls.forEach((el, i) => el.classList.toggle('active', i === idx));
     this._setLabel(idx >= 0 ? this._wedges[idx].label : '');
     return true;
+  }
+
+  /** Draw the radius line from centre toward the cursor (capped to the ring). */
+  _setTether(dx, dy, dist) {
+    if (!this._tetherEl) return;
+    const { c, RO } = this.dim;
+    if (dist < 5) { this._tetherEl.style.opacity = '0'; this._tetherDot.style.opacity = '0'; return; }
+    const max = RO * 1.12;
+    const k = dist > max ? max / dist : 1;
+    const x = c + dx * k, y = c + dy * k;
+    this._tetherEl.setAttribute('x2', x); this._tetherEl.setAttribute('y2', y);
+    this._tetherDot.setAttribute('cx', x); this._tetherDot.setAttribute('cy', y);
+    this._tetherEl.style.opacity = '1';
+    this._tetherDot.style.opacity = '1';
   }
 
   /** @returns {object|null} the wedge under the cursor at release, or null. */
@@ -300,6 +324,7 @@ class RadialDialHUD {
     document.getElementById(CFG.HOST_ID)?.remove();
     const stray = this._host; if (stray && stray.parentNode) stray.remove();
     this._host = this._shadow = this._labelEl = null;
+    this._tetherEl = this._tetherDot = null;
     this._wedgeEls = [];
     this._active = -1;
   }
@@ -320,6 +345,8 @@ class RadialDialHUD {
       .reticle      { stroke: rgba(192,132,252,0.85); stroke-width:1.2; stroke-linecap:round; }
       .reticle-ring { fill:none; stroke: rgba(168,85,247,0.30); stroke-width:1; }
       .reticle-dot  { fill:${CFG.ACCENT_BRIGHT}; filter:url(#mwGlow); }
+      .tether       { stroke: rgba(192,132,252,0.9); stroke-width:2; stroke-linecap:round; filter:url(#mwGlow); opacity:0; transition:opacity .08s ease; }
+      .tether-dot   { fill:#f4ecff; filter:url(#mwGlow); opacity:0; transition:opacity .08s ease; }
       .centre-label { fill:#f4ecff; stroke:rgba(6,4,12,0.92); stroke-width:3.5; paint-order:stroke;
                       font:700 15px 'Segoe UI',system-ui,sans-serif; text-anchor:middle; letter-spacing:.4px; }
       .nav-glyph { fill:none; stroke:${CFG.ACCENT_BRIGHT}; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; filter:url(#mwGlow); }
@@ -332,8 +359,9 @@ class RadialDialHUD {
     return s;
   }
 
-  _buildSVG(D) {
-    const c = D / 2, NS = 'http://www.w3.org/2000/svg';
+  _buildSVG() {
+    const { D, c, RO, RI, ICON, s } = this.dim;
+    const NS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(NS, 'svg');
     svg.setAttribute('viewBox', `0 0 ${D} ${D}`);
     svg.setAttribute('width', D); svg.setAttribute('height', D);
@@ -345,8 +373,9 @@ class RadialDialHUD {
       return n;
     };
     const rad = (a) => a * Math.PI / 180;
+    const a = this._bandAlpha;
 
-    // ── defs: glow filters + wedge gradients ──────────────────────────────
+    // ── defs: glow filters + wedge gradients (band alpha = user setting) ──
     const defs = el('defs', {});
     defs.innerHTML = `
       <filter id="mwGlow" x="-40%" y="-40%" width="180%" height="180%">
@@ -356,21 +385,21 @@ class RadialDialHUD {
         <feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
       </filter>
       <linearGradient id="mwFill" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="rgba(32,24,50,0.62)"/><stop offset="100%" stop-color="rgba(12,9,20,0.62)"/>
+        <stop offset="0%" stop-color="rgba(56,30,96,${a})"/><stop offset="100%" stop-color="rgba(11,7,20,${a})"/>
       </linearGradient>
       <linearGradient id="mwActive" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="rgba(168,85,247,0.55)"/><stop offset="100%" stop-color="rgba(109,40,217,0.60)"/>
+        <stop offset="0%" stop-color="rgba(168,85,247,${Math.max(0.5, a)})"/><stop offset="100%" stop-color="rgba(109,40,217,${Math.max(0.55, a)})"/>
       </linearGradient>`;
     svg.appendChild(defs);
 
     // ── outer dashed rune ring + tick marks ───────────────────────────────
-    svg.appendChild(el('circle', { cx: c, cy: c, r: CFG.RING_OUT + 8 }, 'ring-dash'));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 8 * s }, 'ring-dash'));
     for (let i = 0; i < 24; i++) {
-      const a = rad(i * 15);
-      const r0 = CFG.RING_OUT + 2, r1 = CFG.RING_OUT + (i % 2 ? 5 : 8);
+      const ang = rad(i * 15);
+      const r0 = RO + 2 * s, r1 = RO + (i % 2 ? 5 : 8) * s;
       svg.appendChild(el('line', {
-        x1: c + r0 * Math.cos(a), y1: c + r0 * Math.sin(a),
-        x2: c + r1 * Math.cos(a), y2: c + r1 * Math.sin(a),
+        x1: c + r0 * Math.cos(ang), y1: c + r0 * Math.sin(ang),
+        x2: c + r1 * Math.cos(ang), y2: c + r1 * Math.sin(ang),
       }, 'tick'));
     }
 
@@ -378,84 +407,90 @@ class RadialDialHUD {
     this._wedgeEls = [];
     for (let i = 0; i < 8; i++) {
       const centre = -90 + i * 45;
-      const path = el('path', { d: this._wedgePath(c, centre - 22.5, centre + 22.5) }, 'wedge');
+      const path = el('path', { d: this._wedgePath(c, RO, RI, centre - 22.5, centre + 22.5) }, 'wedge');
       svg.appendChild(path);
       this._wedgeEls.push(path);
     }
 
     // ── dividers between wedges ───────────────────────────────────────────
     for (let i = 0; i < 8; i++) {
-      const a = rad(-67.5 + i * 45);
+      const ang = rad(-67.5 + i * 45);
       svg.appendChild(el('line', {
-        x1: c + CFG.RING_IN * Math.cos(a), y1: c + CFG.RING_IN * Math.sin(a),
-        x2: c + CFG.RING_OUT * Math.cos(a), y2: c + CFG.RING_OUT * Math.sin(a),
+        x1: c + RI * Math.cos(ang), y1: c + RI * Math.sin(ang),
+        x2: c + RO * Math.cos(ang), y2: c + RO * Math.sin(ang),
       }, 'divider'));
     }
 
-    // ── rings (transparent centre — no fill) ──────────────────────────────
-    svg.appendChild(el('circle', { cx: c, cy: c, r: CFG.RING_OUT }, 'ring-main'));
-    svg.appendChild(el('circle', { cx: c, cy: c, r: CFG.RING_IN }, 'ring-inner'));
+    // ── rings (transparent centre hole) ───────────────────────────────────
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO }, 'ring-main'));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RI }, 'ring-inner'));
+
+    // ── cursor tether (radius line from centre → cursor) ──────────────────
+    this._tetherEl  = el('line',   { x1: c, y1: c, x2: c, y2: c }, 'tether');
+    this._tetherDot = el('circle', { cx: c, cy: c, r: 3.2 * s },   'tether-dot');
+    svg.appendChild(this._tetherEl);
+    svg.appendChild(this._tetherDot);
 
     // ── nav glyphs (E forward, S reload, W back) ──────────────────────────
-    this._navGlyph(svg, el, c, 0,   'forward');
-    this._navGlyph(svg, el, c, 90,  'reload');
-    this._navGlyph(svg, el, c, 180, 'back');
+    this._navGlyph(svg, el, c, ICON, s, 0,   'forward');
+    this._navGlyph(svg, el, c, ICON, s, 90,  'reload');
+    this._navGlyph(svg, el, c, ICON, s, 180, 'back');
 
-    // ── centre reticle (minimal, keeps the hole see-through) ──────────────
-    svg.appendChild(el('circle', { cx: c, cy: c, r: 11 }, 'reticle-ring'));
-    for (const [dx1, dy1, dx2, dy2] of [[-9,0,-5,0],[5,0,9,0],[0,-9,0,-5],[0,5,0,9]]) {
-      svg.appendChild(el('line', { x1: c+dx1, y1: c+dy1, x2: c+dx2, y2: c+dy2 }, 'reticle'));
+    // ── centre reticle (scaled, keeps the hole see-through) ───────────────
+    svg.appendChild(el('circle', { cx: c, cy: c, r: 11 * s }, 'reticle-ring'));
+    for (const [x1, y1, x2, y2] of [[-9,0,-5,0],[5,0,9,0],[0,-9,0,-5],[0,5,0,9]]) {
+      svg.appendChild(el('line', { x1: c+x1*s, y1: c+y1*s, x2: c+x2*s, y2: c+y2*s }, 'reticle'));
     }
-    svg.appendChild(el('circle', { cx: c, cy: c, r: 2.4 }, 'reticle-dot'));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: 2.4 * s }, 'reticle-dot'));
 
     // ── centre label (outlined text, readable over the page) ──────────────
-    this._labelEl = el('text', { x: c, y: c - 26 }, 'centre-label');
+    this._labelEl = el('text', { x: c, y: c - 26 * s }, 'centre-label');
     this._labelEl.textContent = '';
     svg.appendChild(this._labelEl);
 
     return svg;
   }
 
-  /** Donut wedge path between two angles (degrees). */
-  _wedgePath(c, a0, a1) {
+  /** Donut wedge path between two angles (degrees) at radii RO/RI. */
+  _wedgePath(c, RO, RI, a0, a1) {
     const rad = (a) => a * Math.PI / 180;
-    const RO = CFG.RING_OUT, RI = CFG.RING_IN;
     const p = (r, a) => [c + r * Math.cos(rad(a)), c + r * Math.sin(rad(a))];
     const [ox0, oy0] = p(RO, a0), [ox1, oy1] = p(RO, a1);
     const [ix1, iy1] = p(RI, a1), [ix0, iy0] = p(RI, a0);
     return `M ${ox0} ${oy0} A ${RO} ${RO} 0 0 1 ${ox1} ${oy1} L ${ix1} ${iy1} A ${RI} ${RI} 0 0 0 ${ix0} ${iy0} Z`;
   }
 
-  _navGlyph(svg, el, c, angDeg, kind) {
+  _navGlyph(svg, el, c, ICON, s, angDeg, kind) {
     const rad = angDeg * Math.PI / 180;
-    const x = c + CFG.ICON_R * Math.cos(rad);
-    const y = c + CFG.ICON_R * Math.sin(rad);
-    const g = el('g', { transform: `translate(${x} ${y})` });
+    const x = c + ICON * Math.cos(rad);
+    const y = c + ICON * Math.sin(rad);
+    const g = el('g', { transform: `translate(${x} ${y}) scale(${s})` });
     if (kind === 'forward') {
-      g.appendChild(el('path', { d: 'M-4 -7 L4 0 L-4 7' }, 'nav-glyph'));
+      g.appendChild(el('path', { d: 'M-8 0 H4 M4 -4.5 L8.5 0 L4 4.5' }, 'nav-glyph'));
     } else if (kind === 'back') {
-      g.appendChild(el('path', { d: 'M4 -7 L-4 0 L4 7' }, 'nav-glyph'));
-    } else { // reload
-      g.appendChild(el('path', { d: 'M7 0 A7 7 0 1 1 4 -6' }, 'nav-glyph'));
-      g.appendChild(el('path', { d: 'M4 -9 L5 -5 L1 -5 Z', fill: CFG.ACCENT_BRIGHT, stroke: 'none' }));
+      g.appendChild(el('path', { d: 'M8 0 H-4 M-4 -4.5 L-8.5 0 L-4 4.5' }, 'nav-glyph'));
+    } else { // reload — circular arrow with a clean arrowhead
+      g.appendChild(el('path', { d: 'M6.5 -2.5 A7 7 0 1 1 3 -6.3' }, 'nav-glyph'));
+      g.appendChild(el('path', { d: 'M6.6 -6.6 L6.9 -1.6 L2 -3.4 Z', fill: CFG.ACCENT_BRIGHT, stroke: 'none' }));
     }
     svg.appendChild(g);
   }
 
   /** HTML icon overlays for URL wedges (favicons / placeholders / lock). */
-  _buildIcons(shadow, D) {
-    const c = D / 2;
+  _buildIcons(shadow) {
+    const { c, ICON, s } = this.dim;
     this._wedges.forEach((w, i) => {
       if (w.kind !== 'url') return;
       const centre = -90 + i * 45;
       const rad = centre * Math.PI / 180;
-      const x = c + CFG.ICON_R * Math.cos(rad);
-      const y = c + CFG.ICON_R * Math.sin(rad);
+      const x = c + ICON * Math.cos(rad);
+      const y = c + ICON * Math.sin(rad);
 
       const box = document.createElement('div');
       box.className = 'ico';
       box.style.left = `${x}px`;
       box.style.top  = `${y}px`;
+      box.style.transform = `translate(-50%,-50%) scale(${s})`;   // scale icon with dial
 
       if (w.url && !w.locked) {
         // favicon with letter fallback
@@ -512,16 +547,18 @@ class MouseController {
     this._ticker  = new Ticker();
     this._guard   = new ContextGuard();
 
-    this._active   = false;   // right button held with dial open
+    this._open     = false;   // dial is currently shown
     this._engaged  = false;   // cursor left the dead-zone at least once
-    this._originX  = 0;
-    this._originY  = 0;
-    this._moveX    = 0;
-    this._moveY    = 0;
+    this._pending  = null;    // hold-to-open timer id
+    this._safety   = null;    // last-resort auto-dismiss timer
+    this._downX    = 0;       // right-button-down origin (dial centre)
+    this._downY    = 0;
+    this._curX     = 0;       // latest cursor position
+    this._curY     = 0;
     this._movePending = false;
 
     this._bind();
-    console.log('[MOUSSY] Radial dial engine ready — build: v3-transparent —', location.hostname);
+    console.log('[MOUSSY] Radial dial engine ready — build: v6-polish —', location.hostname);
   }
 
   _bind() {
@@ -529,24 +566,65 @@ class MouseController {
     document.addEventListener('mousemove',   this._onMove.bind(this),  { passive: true });
     document.addEventListener('mouseup',     this._onUp.bind(this),    { capture: true });
     document.addEventListener('contextmenu', this._onCtx.bind(this),   { capture: true });
+    // Also listen on window so a release just outside the document still lands.
+    window.addEventListener('mouseup',       this._onUp.bind(this),    { capture: true });
+    // Safety nets so the dial can never get stuck open if the mouseup is lost
+    // (cursor over an iframe/embed, alt-tab, tab switch, focus loss).
+    window.addEventListener('blur',          () => this._forceClose());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this._forceClose(); });
+  }
+
+  _cancelPending() {
+    if (this._pending) { clearTimeout(this._pending); this._pending = null; }
+  }
+
+  _clearSafety() { if (this._safety) { clearTimeout(this._safety); this._safety = null; } }
+
+  /** Dismiss the dial without firing (cancel path for lost-release / focus loss). */
+  _forceClose() {
+    this._cancelPending();
+    this._clearSafety();
+    if (!this._open) return;
+    this._open = false;
+    this._hud.dismiss();
   }
 
   _onDown(e) {
     if (e.button !== 2) return;
     if (Store.isPaused()) return;          // gestures off for this page
 
-    this._active  = true;
+    this._cancelPending();
+    this._downX = this._curX = e.clientX;
+    this._downY = this._curY = e.clientY;
+    this._open = false;
     this._engaged = false;
-    this._originX = e.clientX;
-    this._originY = e.clientY;
-    this._hud.spawn(e.clientX, e.clientY, buildWedges());
+
+    // Hold-to-activate: the dial only appears after the configured delay, so a
+    // normal quick right-click still opens the browser's context menu.
+    const delay = Store.dialDelay();
+    if (delay <= 0) this._openDial();
+    else this._pending = setTimeout(() => this._openDial(), delay);
+  }
+
+  _openDial() {
+    this._pending = null;
+    if (this._open) return;
+    this._open = true;
+    this._hud.spawn(this._downX, this._downY, buildWedges(), {
+      scale:     Store.dialSize(),
+      bandAlpha: Store.dialOpacity(),
+    });
     this._ticker.tick(900, 0.10, 0.05);    // soft "open" blip
+    this._track();                          // reflect any movement during the hold
+    // Last-resort auto-dismiss if a release is never seen.
+    this._clearSafety();
+    this._safety = setTimeout(() => this._forceClose(), 8000);
   }
 
   _onMove(e) {
-    if (!this._active) return;
-    this._moveX = e.clientX;
-    this._moveY = e.clientY;
+    this._curX = e.clientX;
+    this._curY = e.clientY;
+    if (!this._open) return;
     if (!this._movePending) {
       this._movePending = true;
       requestAnimationFrame(() => this._processMove());
@@ -555,27 +633,35 @@ class MouseController {
 
   _processMove() {
     this._movePending = false;
-    if (!this._active) return;
-    const dx = this._moveX - this._originX;
-    const dy = this._moveY - this._originY;
-    if (Math.hypot(dx, dy) >= CFG.DEAD_ZONE) this._engaged = true;
+    if (this._open) this._track();
+  }
+
+  _track() {
+    const dx = this._curX - this._downX;
+    const dy = this._curY - this._downY;
+    if (Math.hypot(dx, dy) >= this._hud.deadZone()) this._engaged = true;
     const changed = this._hud.track(dx, dy);
     if (changed && this._hud.selected()) this._ticker.tick(1550, 0.16, 0.04);  // per-slot tick
   }
 
   _onUp(e) {
-    if (e.button !== 2 || !this._active) return;
-    this._active = false;
+    if (e.button !== 2) return;
+    this._cancelPending();
+    this._clearSafety();
+    if (!this._open) return;   // released before the dial opened → native menu
 
+    this._open = false;
     const wedge = this._hud.selected();
     this._hud.dismiss();
-
-    if (this._engaged) this._guard.arm();   // a real gesture happened → swallow the menu
+    this._guard.arm();         // dial was shown → swallow the context menu
     if (wedge) this._fire(wedge);
   }
 
   _onCtx(e) {
-    if (this._guard.consume()) { e.preventDefault(); e.stopPropagation(); }
+    if (this._guard.consume()) { e.preventDefault(); e.stopPropagation(); return; }
+    // If the menu fires while the dial is still open, the release was lost —
+    // cancel the dial and swallow this menu so nothing gets stuck.
+    if (this._open) { e.preventDefault(); e.stopPropagation(); this._forceClose(); }
   }
 
   // ── Action dispatch ──────────────────────────────────────────────────────────

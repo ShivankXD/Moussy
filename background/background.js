@@ -44,6 +44,9 @@ const STORAGE_HUD         = 'moussy_hud_clock';
 const STORAGE_INSTALL     = 'moussy_install_date';
 const STORAGE_PAUSE_GLOBAL = 'moussy_paused_global';  // boolean
 const STORAGE_PAUSE_HOSTS  = 'moussy_paused_hosts';   // string[]
+const STORAGE_DIAL_SIZE    = 'moussy_dial_size';      // number (scale ~0.82)
+const STORAGE_DIAL_OPACITY = 'moussy_dial_opacity';   // number (band alpha 0..1)
+const STORAGE_DIAL_DELAY   = 'moussy_dial_delay';     // number (hold ms, default 500)
 
 const OFFSCREEN_URL       = 'offscreen/offscreen.html';
 // NOTE: chrome.offscreen.Reason.AUDIO_PLAYBACK is used directly in createDocument().
@@ -637,6 +640,9 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
       [STORAGE_HUD]:           false,
       [STORAGE_PAUSE_GLOBAL]:  false,
       [STORAGE_PAUSE_HOSTS]:   [],
+      [STORAGE_DIAL_SIZE]:     0.82,   // a touch smaller than base
+      [STORAGE_DIAL_OPACITY]:  0.55,   // violet/black band mix
+      [STORAGE_DIAL_DELAY]:    500,    // hold 0.5s before the dial opens
       [STORAGE_INSTALL]:       new Date().toISOString(),
     });
 
@@ -647,11 +653,14 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
 
   } else if (reason === 'update') {
     // ── Update: migrate storage keys if needed (future-proofing) ──────
-    const existing = await storageGet([STORAGE_PLAN, STORAGE_PAUSE_GLOBAL, STORAGE_PAUSE_HOSTS]);
+    const existing = await storageGet([STORAGE_PLAN, STORAGE_PAUSE_GLOBAL, STORAGE_PAUSE_HOSTS, STORAGE_DIAL_SIZE, STORAGE_DIAL_OPACITY, STORAGE_DIAL_DELAY]);
     const seed = {};
     if (existing[STORAGE_PLAN]         === undefined) seed[STORAGE_PLAN]         = 'free';
     if (existing[STORAGE_PAUSE_GLOBAL] === undefined) seed[STORAGE_PAUSE_GLOBAL] = false;
     if (existing[STORAGE_PAUSE_HOSTS]  === undefined) seed[STORAGE_PAUSE_HOSTS]  = [];
+    if (existing[STORAGE_DIAL_SIZE]    === undefined) seed[STORAGE_DIAL_SIZE]    = 0.82;
+    if (existing[STORAGE_DIAL_OPACITY] === undefined) seed[STORAGE_DIAL_OPACITY] = 0.55;
+    if (existing[STORAGE_DIAL_DELAY]   === undefined) seed[STORAGE_DIAL_DELAY]   = 500;
     if (Object.keys(seed).length) await storageSet(seed);
     console.log(`[MOUSSY] Updated from ${previousVersion}. Storage migration complete.`);
   }
