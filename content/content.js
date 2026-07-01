@@ -56,7 +56,14 @@ const CFG = Object.freeze({
   STORAGE_PLAN:         'moussy_plan',
   STORAGE_PAUSE_GLOBAL: 'moussy_paused_global',
   STORAGE_PAUSE_HOSTS:  'moussy_paused_hosts',
+  STORAGE_SIZE:         'moussy_dial_size',      // scale multiplier (~0.5..1.6)
+  STORAGE_OPACITY:      'moussy_dial_opacity',   // band fill alpha (0..1)
+
+  DEFAULT_SIZE:         0.82,   // a touch smaller than base
+  DEFAULT_OPACITY:      0.55,   // violet/black band mix
 });
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ── Caches (slots + premium + pause), primed from storage, live-updated
@@ -67,17 +74,22 @@ const Store = (() => {
   let _plan  = 'free';
   let _pauseGlobal = false;
   let _pauseHosts  = [];
+  let _size    = CFG.DEFAULT_SIZE;
+  let _opacity = CFG.DEFAULT_OPACITY;
   const _host = (() => { try { return location.hostname; } catch { return ''; } })();
 
   (async () => {
     try {
       const d = await chrome.storage.local.get([
         CFG.STORAGE_SLOTS, CFG.STORAGE_PLAN, CFG.STORAGE_PAUSE_GLOBAL, CFG.STORAGE_PAUSE_HOSTS,
+        CFG.STORAGE_SIZE, CFG.STORAGE_OPACITY,
       ]);
       setSlots(d[CFG.STORAGE_SLOTS]);
       _plan        = d[CFG.STORAGE_PLAN] ?? 'free';
       _pauseGlobal = d[CFG.STORAGE_PAUSE_GLOBAL] === true;
       _pauseHosts  = Array.isArray(d[CFG.STORAGE_PAUSE_HOSTS]) ? d[CFG.STORAGE_PAUSE_HOSTS] : [];
+      if (typeof d[CFG.STORAGE_SIZE]    === 'number') _size    = d[CFG.STORAGE_SIZE];
+      if (typeof d[CFG.STORAGE_OPACITY] === 'number') _opacity = d[CFG.STORAGE_OPACITY];
     } catch (_) { /* chrome:// or invalidated context */ }
   })();
 
@@ -87,14 +99,18 @@ const Store = (() => {
   }
 
   return {
-    slotUrl(i)   { return _slots[i] || ''; },
-    isPremium()  { return _plan === 'monthly' || _plan === 'legend'; },
-    isPaused()   { return _pauseGlobal || _pauseHosts.includes(_host); },
+    slotUrl(i)     { return _slots[i] || ''; },
+    isPremium()    { return _plan === 'monthly' || _plan === 'legend'; },
+    isPaused()     { return _pauseGlobal || _pauseHosts.includes(_host); },
+    dialSize()     { return clamp(_size, 0.5, 1.6); },
+    dialOpacity()  { return clamp(_opacity, 0, 1); },
     _onChange(changes) {
       if (CFG.STORAGE_SLOTS in changes)        setSlots(changes[CFG.STORAGE_SLOTS].newValue);
       if (CFG.STORAGE_PLAN in changes)         _plan = changes[CFG.STORAGE_PLAN].newValue ?? 'free';
       if (CFG.STORAGE_PAUSE_GLOBAL in changes) _pauseGlobal = changes[CFG.STORAGE_PAUSE_GLOBAL].newValue === true;
       if (CFG.STORAGE_PAUSE_HOSTS in changes)  _pauseHosts = Array.isArray(changes[CFG.STORAGE_PAUSE_HOSTS].newValue) ? changes[CFG.STORAGE_PAUSE_HOSTS].newValue : [];
+      if (CFG.STORAGE_SIZE in changes    && typeof changes[CFG.STORAGE_SIZE].newValue === 'number')    _size = changes[CFG.STORAGE_SIZE].newValue;
+      if (CFG.STORAGE_OPACITY in changes && typeof changes[CFG.STORAGE_OPACITY].newValue === 'number') _opacity = changes[CFG.STORAGE_OPACITY].newValue;
     },
   };
 })();
@@ -196,13 +212,29 @@ class RadialDialHUD {
 
   get isOpen() { return !!this._host; }
 
-  /** Spawn the dial centred at viewport (cx, cy). */
-  spawn(cx, cy, wedges) {
+  /** Effective dead-zone radius in screen px (scales with dial size). */
+  deadZone() { return this.dim ? this.dim.dead : CFG.DEAD_ZONE; }
+
+  /**
+   * Spawn the dial centred at viewport (cx, cy).
+   * @param {object} [opts]  { scale, bandAlpha }
+   */
+  spawn(cx, cy, wedges, opts = {}) {
     this._hardRemove();
     this._wedges = wedges;
     this._active = -1;
 
-    const D = CFG.D;
+    const s = clamp(opts.scale ?? 1, 0.5, 1.6);
+    this._bandAlpha = clamp(opts.bandAlpha ?? CFG.DEFAULT_OPACITY, 0, 1);
+    const D = Math.round(CFG.D * s);
+    this.dim = {
+      s, D, c: D / 2,
+      RO:   CFG.RING_OUT * s,
+      RI:   CFG.RING_IN  * s,
+      ICON: CFG.ICON_R   * s,
+      dead: CFG.DEAD_ZONE * s,
+    };
+
     const host = document.createElement('div');
     host.id = CFG.HOST_ID;
     Object.assign(host.style, {
@@ -217,8 +249,8 @@ class RadialDialHUD {
     const shadow = host.attachShadow({ mode: 'closed' });
     this._shadow = shadow;
     shadow.appendChild(this._style(D));
-    shadow.appendChild(this._buildSVG(D));
-    this._buildIcons(shadow, D);
+    shadow.appendChild(this._buildSVG());
+    this._buildIcons(shadow);
 
     document.documentElement.appendChild(host);
     this._host = host;
@@ -234,7 +266,7 @@ class RadialDialHUD {
     if (!this._host) return false;   // returns true if selection CHANGED
     const dist = Math.hypot(dx, dy);
     let idx = -1;
-    if (dist >= CFG.DEAD_ZONE) {
+    if (dist >= this.dim.dead) {
       const ang = Math.atan2(dy, dx) * 180 / Math.PI;   // -180..180, 0 = right
       idx = (Math.round((ang + 90) / 45) % 8 + 8) % 8;  // 0 = North, clockwise
     }
@@ -276,19 +308,26 @@ class RadialDialHUD {
     const s = document.createElement('style');
     s.textContent = `
       svg { position:absolute; inset:0; overflow:visible; }
-      .wedge { fill: rgba(20,16,32,0.82); stroke: rgba(168,85,247,0.35); stroke-width:1; transition: fill .1s ease; }
-      .wedge.active { fill: rgba(168,85,247,0.55); stroke: ${CFG.ACCENT_BRIGHT}; }
-      .ring { fill:none; stroke: rgba(168,85,247,0.9); stroke-width:2; }
-      .ring-dash { fill:none; stroke: rgba(168,85,247,0.25); stroke-width:1; stroke-dasharray:2 7; }
-      .divider { stroke: rgba(168,85,247,0.25); stroke-width:1; }
-      .centre-bg { fill: rgba(8,6,14,0.92); stroke: rgba(168,85,247,0.5); stroke-width:1.4; }
-      .centre-label { fill:#e9d8ff; font:600 13px 'Segoe UI',sans-serif; text-anchor:middle; }
-      .nav-glyph { fill:none; stroke:${CFG.ACCENT_BRIGHT}; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+      /* Band fill = violet/black mix; its alpha is the user's transparency
+         setting (0 = fully see-through). Selected wedge glows brighter. */
+      .wedge { fill: url(#mwFill); stroke: rgba(168,85,247,0.20); stroke-width:1; transition: fill .12s ease; }
+      .wedge.active { fill: url(#mwActive); stroke: ${CFG.ACCENT_BRIGHT}; stroke-width:1; filter: url(#mwGlowStrong); }
+      .ring-main  { fill:none; stroke: rgba(192,132,252,0.95); stroke-width:2;   filter: url(#mwGlow); }
+      .ring-inner { fill:none; stroke: rgba(168,85,247,0.55); stroke-width:1.4; filter: url(#mwGlow); }
+      .ring-dash  { fill:none; stroke: rgba(168,85,247,0.30); stroke-width:1; stroke-dasharray:2 7; }
+      .tick    { stroke: rgba(168,85,247,0.35); stroke-width:1; stroke-linecap:round; }
+      .divider { stroke: rgba(168,85,247,0.20); stroke-width:1; }
+      .reticle      { stroke: rgba(192,132,252,0.85); stroke-width:1.2; stroke-linecap:round; }
+      .reticle-ring { fill:none; stroke: rgba(168,85,247,0.30); stroke-width:1; }
+      .reticle-dot  { fill:${CFG.ACCENT_BRIGHT}; filter:url(#mwGlow); }
+      .centre-label { fill:#f4ecff; stroke:rgba(6,4,12,0.92); stroke-width:3.5; paint-order:stroke;
+                      font:700 15px 'Segoe UI',system-ui,sans-serif; text-anchor:middle; letter-spacing:.4px; }
+      .nav-glyph { fill:none; stroke:${CFG.ACCENT_BRIGHT}; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; filter:url(#mwGlow); }
       .ico { position:absolute; width:34px; height:34px; transform:translate(-50%,-50%); display:grid; place-items:center; pointer-events:none; }
-      .ico img { width:26px; height:26px; border-radius:5px; display:block; }
-      .ico .ph { font:600 11px 'Segoe UI',sans-serif; color:#b89cf0; text-align:center; line-height:1.05; letter-spacing:.3px; }
-      .ico .letter { width:26px; height:26px; border-radius:5px; background:rgba(168,85,247,0.18); border:1px solid rgba(168,85,247,0.5); color:#e9d8ff; font:700 14px 'Segoe UI',sans-serif; display:grid; place-items:center; }
-      .ico .lock { position:absolute; right:-2px; bottom:-2px; width:13px; height:13px; }
+      .ico img { width:26px; height:26px; border-radius:6px; display:block; box-shadow:0 0 10px rgba(168,85,247,0.45); background:rgba(10,8,16,0.6); }
+      .ico .ph { font:600 11px 'Segoe UI',sans-serif; color:#c9b4ff; text-align:center; line-height:1.05; letter-spacing:.4px; text-shadow:0 0 8px rgba(168,85,247,0.6); }
+      .ico .letter { width:26px; height:26px; border-radius:6px; background:rgba(168,85,247,0.20); border:1px solid rgba(192,132,252,0.6); color:#f0e6ff; font:700 14px 'Segoe UI',sans-serif; display:grid; place-items:center; box-shadow:0 0 10px rgba(168,85,247,0.4); }
+      .ico .lock { position:absolute; right:-3px; bottom:-3px; width:14px; height:14px; filter:drop-shadow(0 0 3px rgba(0,0,0,0.7)); }
     `;
     return s;
   }
@@ -305,30 +344,72 @@ class RadialDialHUD {
       if (cls) n.setAttribute('class', cls);
       return n;
     };
+    const rad = (a) => a * Math.PI / 180;
 
-    // outer dashed decoration
+    // ── defs: glow filters + wedge gradients ──────────────────────────────
+    const defs = el('defs', {});
+    defs.innerHTML = `
+      <filter id="mwGlow" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="mwGlowStrong" x="-60%" y="-60%" width="220%" height="220%">
+        <feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <linearGradient id="mwFill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(32,24,50,0.62)"/><stop offset="100%" stop-color="rgba(12,9,20,0.62)"/>
+      </linearGradient>
+      <linearGradient id="mwActive" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(168,85,247,0.55)"/><stop offset="100%" stop-color="rgba(109,40,217,0.60)"/>
+      </linearGradient>`;
+    svg.appendChild(defs);
+
+    // ── outer dashed rune ring + tick marks ───────────────────────────────
     svg.appendChild(el('circle', { cx: c, cy: c, r: CFG.RING_OUT + 8 }, 'ring-dash'));
+    for (let i = 0; i < 24; i++) {
+      const a = rad(i * 15);
+      const r0 = CFG.RING_OUT + 2, r1 = CFG.RING_OUT + (i % 2 ? 5 : 8);
+      svg.appendChild(el('line', {
+        x1: c + r0 * Math.cos(a), y1: c + r0 * Math.sin(a),
+        x2: c + r1 * Math.cos(a), y2: c + r1 * Math.sin(a),
+      }, 'tick'));
+    }
 
-    // 8 wedges
+    // ── 8 wedges ──────────────────────────────────────────────────────────
     this._wedgeEls = [];
     for (let i = 0; i < 8; i++) {
-      const centre = -90 + i * 45;                // degrees, 0 = right
+      const centre = -90 + i * 45;
       const path = el('path', { d: this._wedgePath(c, centre - 22.5, centre + 22.5) }, 'wedge');
       svg.appendChild(path);
       this._wedgeEls.push(path);
     }
 
-    // rings
-    svg.appendChild(el('circle', { cx: c, cy: c, r: CFG.RING_OUT }, 'ring'));
-    svg.appendChild(el('circle', { cx: c, cy: c, r: CFG.RING_IN }, 'centre-bg'));
+    // ── dividers between wedges ───────────────────────────────────────────
+    for (let i = 0; i < 8; i++) {
+      const a = rad(-67.5 + i * 45);
+      svg.appendChild(el('line', {
+        x1: c + CFG.RING_IN * Math.cos(a), y1: c + CFG.RING_IN * Math.sin(a),
+        x2: c + CFG.RING_OUT * Math.cos(a), y2: c + CFG.RING_OUT * Math.sin(a),
+      }, 'divider'));
+    }
 
-    // nav glyphs (E forward, S reload, W back) drawn in SVG
+    // ── rings (transparent centre — no fill) ──────────────────────────────
+    svg.appendChild(el('circle', { cx: c, cy: c, r: CFG.RING_OUT }, 'ring-main'));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: CFG.RING_IN }, 'ring-inner'));
+
+    // ── nav glyphs (E forward, S reload, W back) ──────────────────────────
     this._navGlyph(svg, el, c, 0,   'forward');
     this._navGlyph(svg, el, c, 90,  'reload');
     this._navGlyph(svg, el, c, 180, 'back');
 
-    // centre label
-    this._labelEl = el('text', { x: c, y: c + 4 }, 'centre-label');
+    // ── centre reticle (minimal, keeps the hole see-through) ──────────────
+    svg.appendChild(el('circle', { cx: c, cy: c, r: 11 }, 'reticle-ring'));
+    for (const [dx1, dy1, dx2, dy2] of [[-9,0,-5,0],[5,0,9,0],[0,-9,0,-5],[0,5,0,9]]) {
+      svg.appendChild(el('line', { x1: c+dx1, y1: c+dy1, x2: c+dx2, y2: c+dy2 }, 'reticle'));
+    }
+    svg.appendChild(el('circle', { cx: c, cy: c, r: 2.4 }, 'reticle-dot'));
+
+    // ── centre label (outlined text, readable over the page) ──────────────
+    this._labelEl = el('text', { x: c, y: c - 26 }, 'centre-label');
     this._labelEl.textContent = '';
     svg.appendChild(this._labelEl);
 
@@ -440,7 +521,7 @@ class MouseController {
     this._movePending = false;
 
     this._bind();
-    console.log('[MOUSSY] Radial dial engine ready on', location.hostname);
+    console.log('[MOUSSY] Radial dial engine ready — build: v3-transparent —', location.hostname);
   }
 
   _bind() {
