@@ -51,6 +51,8 @@ const STORAGE_DIAL_COLOR   = 'moussy_dial_color';     // key into DIAL_COLORS (f
 const STORAGE_DIAL_THEME   = 'moussy_dial_theme';     // key into DIAL_THEMES (premium)
 const STORAGE_SOUND_ID     = 'moussy_sound_id';       // key into SOUND_CATALOG
 const STORAGE_SOUND_CUSTOM = 'moussy_sound_custom';   // { dataUrl } trimmed clip (premium)
+const STORAGE_ACTIVE_DESIGN   = 'moussy_active_design';    // 'radial'|'ghost'|'magic'|'ninja'|'aclock'|'dclock'|'chrono'|'ice'|'dragon'
+const STORAGE_DESIGN_SETTINGS = 'moussy_design_settings';  // { [designId]: {size,opacity,delay,timezone} } — excludes 'radial' (legacy flat keys)
 
 const OFFSCREEN_URL       = 'offscreen/offscreen.html';
 // NOTE: chrome.offscreen.Reason.AUDIO_PLAYBACK is used directly in createDocument().
@@ -673,6 +675,8 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
       [STORAGE_DIAL_THEME]:    'classic',
       [STORAGE_SOUND_ID]:      'classic',
       [STORAGE_SOUND_CUSTOM]:  null,
+      [STORAGE_ACTIVE_DESIGN]:   'radial',
+      [STORAGE_DESIGN_SETTINGS]: {},
       [STORAGE_INSTALL]:       new Date().toISOString(),
     });
 
@@ -686,6 +690,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
     const existing = await storageGet([
       STORAGE_PLAN, STORAGE_PAUSE_GLOBAL, STORAGE_PAUSE_HOSTS, STORAGE_DIAL_SIZE, STORAGE_DIAL_OPACITY,
       STORAGE_DIAL_DELAY, STORAGE_DIAL_COLOR, STORAGE_DIAL_THEME, STORAGE_SOUND_ID, STORAGE_SOUND_CUSTOM,
+      STORAGE_ACTIVE_DESIGN, STORAGE_DESIGN_SETTINGS,
     ]);
     const seed = {};
     if (existing[STORAGE_PLAN]         === undefined) seed[STORAGE_PLAN]         = 'free';
@@ -698,6 +703,8 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
     if (existing[STORAGE_DIAL_THEME]   === undefined) seed[STORAGE_DIAL_THEME]   = 'classic';
     if (existing[STORAGE_SOUND_ID]     === undefined) seed[STORAGE_SOUND_ID]     = 'classic';
     if (existing[STORAGE_SOUND_CUSTOM] === undefined) seed[STORAGE_SOUND_CUSTOM] = null;
+    if (existing[STORAGE_ACTIVE_DESIGN]   === undefined) seed[STORAGE_ACTIVE_DESIGN]   = 'radial';
+    if (existing[STORAGE_DESIGN_SETTINGS] === undefined) seed[STORAGE_DESIGN_SETTINGS] = {};
     if (Object.keys(seed).length) await storageSet(seed);
     console.log(`[MOUSSY] Updated from ${previousVersion}. Storage migration complete.`);
   }

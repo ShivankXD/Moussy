@@ -119,6 +119,34 @@
       padding: 60px 24px 100px;
     }
 
+    /* ── Back to Settings ────────────────────────────────────────────── */
+    .back-link {
+      position: fixed;
+      top: 22px;
+      left: 24px;
+      z-index: 10;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      text-decoration: none;
+      background: rgba(26,26,38,0.7);
+      border: 1px solid var(--border-bright);
+      border-radius: 8px;
+      padding: 9px 14px;
+      backdrop-filter: blur(6px);
+      transition: var(--transition);
+    }
+    .back-link:hover {
+      color: var(--purple);
+      border-color: var(--purple);
+      box-shadow: 0 0 14px var(--purple-glow);
+    }
+    .back-link svg { width: 15px; height: 15px; flex-shrink: 0; }
+
     /* ── Header ──────────────────────────────────────────────────────── */
     .page-header {
       text-align: center;
@@ -433,6 +461,54 @@
       margin-bottom: 28px;
       font-family: var(--font-mono);
       letter-spacing: 0.5px;
+    }
+
+    /* ── Limited-time discount ───────────────────────────────────────── */
+    .limited-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-head);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: #ff6b6b;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      border-radius: 5px;
+      padding: 4px 10px;
+      margin-bottom: 10px;
+    }
+    .limited-badge::before {
+      content: '';
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #ff6b6b;
+      box-shadow: 0 0 6px #ff6b6b;
+      animation: blink 1.4s ease-in-out infinite;
+    }
+
+    /* Struck-through original price, placed to the right of the new price */
+    .price-old {
+      position: relative;
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-muted);
+      padding-bottom: 9px;
+      margin-left: 2px;
+    }
+    .price-old::after {
+      content: '';
+      position: absolute;
+      left: -3px; right: -3px;
+      top: 47%;
+      height: 2px;
+      background: #ef4444;
+      transform: rotate(-9deg);
+      box-shadow: 0 0 6px rgba(239, 68, 68, 0.75);
+      border-radius: 1px;
     }
 
     /* ── Features List ───────────────────────────────────────────────── */
@@ -807,6 +883,11 @@
   <div class="grid-bg" aria-hidden="true"></div>
   <div class="scanlines" aria-hidden="true"></div>
 
+  <a class="back-link" href="../settings/settings.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    SETTINGS
+  </a>
+
   <div class="page">
 
     <!-- ── Header ─────────────────────────────────────────────────────── -->
@@ -908,10 +989,12 @@
         <h2 class="plan-name">MONTHLY PASS</h2>
         <p class="plan-tagline">Full feature unlock, billed monthly</p>
 
+        <div class="limited-badge">For limited time</div>
         <div class="pricing-block">
           <span class="price-currency">$</span>
-          <span class="price-amount">3.99</span>
+          <span class="price-amount">2.99</span>
           <span class="price-period">/ mo</span>
+          <span class="price-old">$3.99</span>
         </div>
         <p class="price-note">// CANCEL ANYTIME — INSTANT ACCESS</p>
 
@@ -975,10 +1058,12 @@
         <h2 class="plan-name">LEGEND PLAN</h2>
         <p class="plan-tagline">One-time payment. Lifetime dominance.</p>
 
+        <div class="limited-badge">Limited time</div>
         <div class="pricing-block">
           <span class="price-currency">$</span>
-          <span class="price-amount">29.99</span>
+          <span class="price-amount">19.99</span>
           <span class="price-period">once</span>
+          <span class="price-old">$29.99</span>
         </div>
         <p class="price-note">// ONE-TIME — LIFETIME UNRESTRICTED ACCESS</p>
 

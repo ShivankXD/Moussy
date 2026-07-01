@@ -57,6 +57,35 @@
       display:flex;align-items:center;gap:8px;transition:var(--tr)}
     .card-title .tray-open-btn:hover{background:rgba(168,85,247,0.2);box-shadow:0 0 14px var(--glow)}
 
+    /* ── Designs gallery (roman numeral tabs) ────────────────────────────── */
+    .design-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+    .design-tab{position:relative;display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--border);
+      border-radius:8px;padding:8px 12px;cursor:pointer;transition:var(--tr);color:var(--text-dim)}
+    .design-tab:hover{border-color:var(--border-bright);color:var(--text)}
+    .design-tab.selected{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple),0 0 14px rgba(168,85,247,0.25);color:var(--text)}
+    .design-tab.locked{opacity:.72}
+    .design-tab.is-active{border-color:var(--gold)}
+    .design-tab .dt-roman{font-family:var(--head);font-weight:800;font-size:13px;color:var(--purple-bright);min-width:18px;text-align:center}
+    .design-tab.is-active .dt-roman{color:var(--gold)}
+    .design-tab .dt-name{font-family:var(--mono);font-size:10.5px;letter-spacing:.5px;display:flex;flex-direction:column;line-height:1.3}
+    .design-tab .dt-name b{font-size:8px;color:var(--gold);font-weight:700;letter-spacing:1px}
+    .design-tab .dt-lock{font-size:11px}
+    .design-tab .dt-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 6px var(--gold)}
+
+    .design-profile{border-top:1px solid var(--border);padding-top:18px}
+    .profile-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .profile-head #design-name-label{font-family:var(--head);font-weight:700;font-size:13px;letter-spacing:1.5px;color:var(--text)}
+    .profile-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+    .use-btn{font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:1.5px;color:#fff;
+      background:linear-gradient(90deg,var(--purple-dim),var(--purple));border:none;border-radius:7px;padding:9px 16px;cursor:pointer;
+      box-shadow:0 0 14px var(--glow);transition:var(--tr)}
+    .use-btn:hover:not(:disabled){filter:brightness(1.12)}
+    .use-btn:disabled,.use-btn.is-active{background:rgba(245,197,66,0.15);color:var(--gold);border:1px solid rgba(245,197,66,0.5);
+      box-shadow:none;cursor:default}
+    #timezone-select{width:100%;background:#0e0e16;border:1px solid var(--border-bright);border-radius:7px;color:var(--text);
+      font-family:var(--mono);font-size:12px;padding:9px 10px;outline:none;cursor:pointer}
+    #timezone-select:focus{border-color:var(--purple)}
+
     /* dial config grid */
     .dial-grid{display:grid;grid-template-columns:minmax(300px,1fr) 320px;gap:24px;align-items:stretch}
     @media(max-width:880px){.dial-grid{grid-template-columns:1fr}}
@@ -74,15 +103,17 @@
       radial-gradient(circle at 72% 65%,rgba(80,140,255,0.22),transparent 42%)}
     .pv-dial{position:relative;z-index:2}
     .pv-dial svg{position:absolute;inset:0}
-    .pv-ico{position:absolute;width:34px;height:34px;transform:translate(-50%,-50%);display:grid;place-items:center;z-index:3}
-    .pv-ico img{width:24px;height:24px;border-radius:6px;box-shadow:0 0 10px var(--glow);background:rgba(10,8,16,0.6)}
-    .pv-ph{font:600 10px var(--body);color:#cbb6ff;text-align:center;line-height:1.05;text-shadow:0 0 8px var(--glow)}
-    .pv-letter{width:24px;height:24px;border-radius:6px;background:rgba(168,85,247,0.22);border:1px solid var(--purple-bright);
-      color:#f0e6ff;font:700 13px var(--body);display:grid;place-items:center}
-    .pv-lock{position:absolute;right:-3px;bottom:-3px;line-height:0;filter:drop-shadow(0 0 3px rgba(0,0,0,0.7))}
-    .pv-glyph{width:24px;height:24px;border-radius:6px;background:rgba(168,85,247,0.18);border:1px solid var(--purple-bright);
-      display:grid;place-items:center;box-shadow:0 0 10px var(--glow)}
-    .pv-glyph svg{width:15px;height:15px}
+    /* Box sized to clear the ring band at EVERY angle — exact mirror of
+       content.js's .ico sizing (see that file for the corner-reach math). */
+    .pv-ico{position:absolute;width:18px;height:18px;transform:translate(-50%,-50%);display:grid;place-items:center;z-index:3}
+    .pv-ico img{width:14px;height:14px;border-radius:4px;box-shadow:0 0 6px var(--glow);background:rgba(10,8,16,0.6)}
+    .pv-ph{font:600 6px var(--body);color:#cbb6ff;text-align:center;line-height:1.05;text-shadow:0 0 6px var(--glow)}
+    .pv-letter{width:14px;height:14px;border-radius:4px;background:rgba(168,85,247,0.22);border:1px solid var(--purple-bright);
+      color:#f0e6ff;font:700 8px var(--body);display:grid;place-items:center}
+    .pv-lock{position:absolute;right:-1px;bottom:-1px;line-height:0;filter:drop-shadow(0 0 2px rgba(0,0,0,0.7))}
+    .pv-glyph{width:14px;height:14px;border-radius:4px;background:rgba(168,85,247,0.18);border:1px solid var(--purple-bright);
+      display:grid;place-items:center;box-shadow:0 0 6px var(--glow)}
+    .pv-glyph svg{width:8px;height:8px}
 
     /* controls */
     .controls{display:flex;flex-direction:column;gap:22px;justify-content:center}
@@ -236,38 +267,65 @@
   <!-- main -->
   <main class="main">
 
-    <!-- Radial dial: preview + controls -->
+    <!-- Designs gallery: 9 dial designs, click a roman numeral to open its profile -->
     <section class="card">
       <div class="card-title">
-        <span class="card-num">1</span> RADIAL DIAL
-        <button class="tray-open-btn" id="tray-btn" type="button">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.1-.7-.4-1-.2-.2-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5h1.8c2.3 0 4.1-1.8 4.1-4.1C20.1 6.5 16.5 2 12 2z"/></svg>
-          COLORS &amp; THEMES
-        </button>
+        <span class="card-num">1</span> DESIGNS
       </div>
-      <div class="dial-grid">
-        <div class="stage" id="preview-stage"></div>
-        <div class="controls">
-          <div class="ctrl">
-            <label>Dial size <span class="v" id="size-val">82%</span></label>
-            <input type="range" id="size-slider" min="0.5" max="1.6" step="0.02" />
-            <div class="hint">Smaller ◂ — ▸ Bigger</div>
-          </div>
-          <div class="ctrl">
-            <label>Band transparency <span class="v" id="opacity-val">55%</span></label>
-            <input type="range" id="opacity-slider" min="0" max="1" step="0.02" />
-            <div class="hint">Fully clear ◂ — ▸ Solid violet</div>
-          </div>
-          <div class="ctrl">
-            <label>Hold to activate <span class="v">seconds</span></label>
-            <div class="delay-box">
-              <input type="number" id="delay-input" min="0" max="5" step="0.1" value="0.5" />
-              <span class="unit">sec hold</span>
+
+      <div class="design-tabs" id="design-tabs" role="tablist" aria-label="Dial designs"></div>
+
+      <div class="design-profile">
+        <div class="profile-head">
+          <span id="design-name-label">I. RADIAL DIAL — DEFAULT</span>
+          <button class="tray-open-btn" id="tray-btn" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.1-.7-.4-1-.2-.2-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5h1.8c2.3 0 4.1-1.8 4.1-4.1C20.1 6.5 16.5 2 12 2z"/></svg>
+            COLORS &amp; THEMES
+          </button>
+        </div>
+
+        <div class="dial-grid">
+          <div class="stage" id="preview-stage"></div>
+
+          <div class="controls">
+            <div id="design-lock-note" class="upgrade" style="display:none">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              This design unlocks with Premium.
+              <a href="../premium/premium.html">Upgrade →</a>
             </div>
-            <div class="delay-warn ok" id="delay-warn">✓ Comfortable range (default 0.5s).</div>
-            <div class="hint">⚠ Default is <b>0.5s</b> — type any value. Below ~0.1s fires on normal right-clicks; above ~1s gets tiring.</div>
+
+            <div id="design-controls-body">
+              <div class="ctrl">
+                <label>Dial size <span class="v" id="size-val">82%</span></label>
+                <input type="range" id="size-slider" min="0.5" max="1.6" step="0.02" />
+                <div class="hint">Smaller ◂ — ▸ Bigger</div>
+              </div>
+              <div class="ctrl">
+                <label>Band transparency <span class="v" id="opacity-val">55%</span></label>
+                <input type="range" id="opacity-slider" min="0" max="1" step="0.02" />
+                <div class="hint">Fully clear ◂ — ▸ Solid</div>
+              </div>
+              <div class="ctrl">
+                <label>Hold to activate <span class="v">seconds</span></label>
+                <div class="delay-box">
+                  <input type="number" id="delay-input" min="0" max="5" step="0.1" value="0.5" />
+                  <span class="unit">sec hold</span>
+                </div>
+                <div class="delay-warn ok" id="delay-warn">✓ Comfortable range (default 0.5s).</div>
+                <div class="hint">⚠ Default is <b>0.5s</b> — type any value. Below ~0.1s fires on normal right-clicks; above ~1s gets tiring.</div>
+              </div>
+              <div class="ctrl" id="timezone-ctrl" style="display:none">
+                <label>Timezone</label>
+                <select id="timezone-select"></select>
+                <div class="hint">Used to show the correct live time for this clock design.</div>
+              </div>
+
+              <div class="profile-actions">
+                <button class="reset" id="reset-dial" type="button">↺ RESET TO DEFAULT</button>
+                <button class="use-btn" id="use-design-btn" type="button">USE THIS DESIGN</button>
+              </div>
+            </div>
           </div>
-          <button class="reset" id="reset-dial" type="button">↺ RESET TO DEFAULT</button>
         </div>
       </div>
     </section>
