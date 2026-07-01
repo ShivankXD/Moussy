@@ -52,6 +52,10 @@
     .card-title{display:flex;align-items:center;gap:10px;font-family:var(--head);font-weight:700;font-size:14px;letter-spacing:2px;margin-bottom:18px}
     .card-num{width:24px;height:24px;display:grid;place-items:center;border-radius:6px;background:rgba(168,85,247,0.15);
       border:1px solid var(--purple);color:var(--purple-bright);font-size:12px}
+    .card-title .tray-open-btn{margin-left:auto;font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--purple-bright);
+      background:rgba(168,85,247,0.10);border:1px solid var(--purple);border-radius:7px;padding:8px 14px;cursor:pointer;
+      display:flex;align-items:center;gap:8px;transition:var(--tr)}
+    .card-title .tray-open-btn:hover{background:rgba(168,85,247,0.2);box-shadow:0 0 14px var(--glow)}
 
     /* dial config grid */
     .dial-grid{display:grid;grid-template-columns:minmax(300px,1fr) 320px;gap:24px;align-items:stretch}
@@ -76,6 +80,9 @@
     .pv-letter{width:24px;height:24px;border-radius:6px;background:rgba(168,85,247,0.22);border:1px solid var(--purple-bright);
       color:#f0e6ff;font:700 13px var(--body);display:grid;place-items:center}
     .pv-lock{position:absolute;right:-3px;bottom:-3px;line-height:0;filter:drop-shadow(0 0 3px rgba(0,0,0,0.7))}
+    .pv-glyph{width:24px;height:24px;border-radius:6px;background:rgba(168,85,247,0.18);border:1px solid var(--purple-bright);
+      display:grid;place-items:center;box-shadow:0 0 10px var(--glow)}
+    .pv-glyph svg{width:15px;height:15px}
 
     /* controls */
     .controls{display:flex;flex-direction:column;gap:22px;justify-content:center}
@@ -106,7 +113,7 @@
     .upgrade a:hover{background:rgba(168,85,247,0.18)}
 
     /* slot rows */
-    .slot{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);
+    .slot{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);
       background:var(--bg-2);margin-bottom:10px;transition:var(--tr)}
     .slot:hover{border-color:var(--border-bright)}
     .slot.locked{opacity:.8}
@@ -114,19 +121,87 @@
     .slot .tag b{display:block;color:var(--purple-bright);font-size:12px}
     .fav{width:36px;height:36px;flex-shrink:0;display:grid;place-items:center;border-radius:8px;background:#fff;overflow:hidden}
     .fav .fav-letter{color:#333;font-weight:700}
+    .slot select.slot-mode{flex-shrink:0;background:#0e0e16;border:1px solid var(--border-bright);border-radius:7px;
+      color:var(--text);font-family:var(--mono);font-size:11px;padding:9px 8px;outline:none;cursor:pointer}
     .slot input[type=url]{flex:1;min-width:0;background:#0e0e16;border:1px solid var(--border-bright);border-radius:7px;
       color:var(--text);font-family:var(--mono);font-size:13px;padding:10px 12px;outline:none;transition:var(--tr)}
     .slot input[type=url]:focus{border-color:var(--purple);box-shadow:0 0 0 2px rgba(168,85,247,0.2)}
-    .slot input[type=url]:disabled{opacity:.6;cursor:not-allowed}
+    .slot input[type=url]:disabled{cursor:not-allowed}
     .lock-badge{display:flex;align-items:center;gap:6px;flex-shrink:0;font-family:var(--mono);font-size:9px;letter-spacing:.5px;
       color:var(--purple-bright);border:1px solid rgba(168,85,247,0.4);border-radius:6px;padding:5px 8px}
     .lock-badge svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2}
 
+    /* ── Appearance tray (colours + themes) ─────────────────────────────── */
+    #tray-backdrop{position:fixed;inset:0;background:rgba(4,4,8,0.6);backdrop-filter:blur(2px);opacity:0;pointer-events:none;
+      transition:opacity var(--tr);z-index:200}
+    #appearance-tray{position:fixed;top:0;right:0;bottom:0;width:380px;max-width:92vw;background:linear-gradient(180deg,var(--surface-2),var(--bg-2));
+      border-left:1px solid var(--border-bright);box-shadow:-10px 0 40px rgba(0,0,0,0.5);transform:translateX(100%);
+      transition:transform .24s cubic-bezier(.22,1,.36,1);z-index:201;display:flex;flex-direction:column;overflow-y:auto}
+    #appearance-tray.open{transform:translateX(0)}
+    #tray-backdrop.open{opacity:1;pointer-events:auto}
+    .tray-head{display:flex;align-items:center;gap:10px;padding:20px 22px;border-bottom:1px solid var(--border)}
+    .tray-head h2{font-family:var(--head);font-weight:800;font-size:15px;letter-spacing:2px}
+    .tray-head button{margin-left:auto;background:transparent;border:1px solid var(--border-bright);border-radius:6px;
+      color:var(--text-dim);width:30px;height:30px;cursor:pointer;font-size:16px}
+    .tray-body{padding:20px 22px;display:flex;flex-direction:column;gap:26px}
+    .tray-section-title{font-family:var(--mono);font-size:11px;letter-spacing:1.5px;color:var(--text-mute);margin-bottom:12px}
+    .swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .swatch{--sw:#a855f7;width:100%;aspect-ratio:1;border-radius:50%;border:3px solid transparent;cursor:pointer;
+      background:var(--sw);box-shadow:0 0 0 1px var(--border-bright), 0 4px 10px rgba(0,0,0,0.4);transition:var(--tr)}
+    .swatch:hover{transform:scale(1.08)}
+    .swatch.selected{border-color:#fff;box-shadow:0 0 0 1px var(--sw), 0 0 16px var(--sw)}
+    .theme-cards{display:flex;flex-direction:column;gap:10px}
+    .theme-card{text-align:left;background:var(--bg-2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;
+      cursor:pointer;transition:var(--tr);position:relative}
+    .theme-card:hover{border-color:var(--border-bright)}
+    .theme-card.selected{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple), 0 0 14px rgba(168,85,247,0.25)}
+    .theme-card.locked{opacity:.6;cursor:not-allowed}
+    .theme-name{font-weight:600;font-size:13px;margin-bottom:3px}
+    .theme-desc{font-size:11.5px;color:var(--text-mute)}
+    .theme-badge{position:absolute;top:10px;right:12px;font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--gold)}
+
+    /* ── Sound catalog ───────────────────────────────────────────────────── */
+    .sound-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:8px;border:1px solid var(--border);
+      background:var(--bg-2);margin-bottom:8px;cursor:pointer;transition:var(--tr)}
+    .sound-row:hover{border-color:var(--border-bright)}
+    .sound-row.selected{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple), 0 0 12px rgba(168,85,247,0.2)}
+    .sound-row.locked{opacity:.75;cursor:default}
+    .sound-radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--border-bright);flex-shrink:0;position:relative}
+    .sound-row.selected .sound-radio{border-color:var(--purple-bright)}
+    .sound-row.selected .sound-radio::after{content:'';position:absolute;inset:2px;border-radius:50%;background:var(--purple-bright)}
+    .sound-name{font-size:13px;font-weight:500;flex:1}
+    .play-btn{background:rgba(168,85,247,0.12);border:1px solid var(--border-bright);border-radius:6px;color:var(--purple-bright);
+      width:30px;height:28px;cursor:pointer;font-size:11px}
+    .play-btn:hover{background:rgba(168,85,247,0.22)}
+
+    .custom-sound-box{border:1px dashed var(--border-bright);border-radius:9px;padding:16px;margin-top:6px}
+    .custom-sound-box h4{font-size:12px;letter-spacing:1px;margin-bottom:10px;color:var(--text-dim)}
+    .file-btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:1px;
+      color:var(--purple-bright);background:rgba(168,85,247,0.10);border:1px solid var(--purple);border-radius:7px;
+      padding:9px 14px;cursor:pointer}
+    .file-btn:hover{background:rgba(168,85,247,0.2)}
+    #trim-panel{display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+    #trim-panel.visible{display:block}
+    .trim-row{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+    .trim-row label{font-family:var(--mono);font-size:10px;color:var(--text-mute);letter-spacing:.5px}
+    .trim-actions{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap}
+    .trim-actions button{font-family:var(--mono);font-size:11px;letter-spacing:1px;border-radius:7px;padding:9px 14px;cursor:pointer}
+    #trim-preview-btn{background:transparent;border:1px solid var(--border-bright);color:var(--text-dim)}
+    #trim-save-btn{background:linear-gradient(90deg,var(--purple-dim),var(--purple));border:none;color:#fff;box-shadow:0 0 12px var(--glow)}
+    #custom-sound-current{font-family:var(--mono);font-size:11px;color:var(--text-mute);margin-top:10px}
+
+    /* ── Import / Export ─────────────────────────────────────────────────── */
+    .io-row{display:flex;gap:14px;flex-wrap:wrap}
+    .io-btn{display:flex;align-items:center;gap:10px;font-family:var(--head);font-weight:700;font-size:12px;letter-spacing:1.5px;
+      background:var(--bg-2);border:1px solid var(--border-bright);border-radius:9px;padding:13px 18px;cursor:pointer;color:var(--text);transition:var(--tr)}
+    .io-btn:hover{border-color:var(--purple);box-shadow:0 0 14px rgba(168,85,247,0.2)}
+    .io-note{font-family:var(--mono);font-size:10px;color:var(--text-mute);margin-top:10px}
+
     /* toast */
     #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
-      background:var(--surface-2);border:1px solid var(--purple);border-radius:8px;padding:12px 22px;
+      background:var(--surface-2);border:1px solid var(--purple);border-radius:8px;padding:12px 22px;max-width:80vw;
       font-family:var(--mono);font-size:12px;letter-spacing:1px;color:var(--purple-bright);box-shadow:0 0 24px var(--glow);
-      transition:var(--tr);pointer-events:none;z-index:100}
+      transition:var(--tr);pointer-events:none;z-index:300}
     #toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
   </style>
 </head>
@@ -163,7 +238,13 @@
 
     <!-- Radial dial: preview + controls -->
     <section class="card">
-      <div class="card-title"><span class="card-num">1</span> RADIAL DIAL</div>
+      <div class="card-title">
+        <span class="card-num">1</span> RADIAL DIAL
+        <button class="tray-open-btn" id="tray-btn" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.1-.7-.4-1-.2-.2-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5h1.8c2.3 0 4.1-1.8 4.1-4.1C20.1 6.5 16.5 2 12 2z"/></svg>
+          COLORS &amp; THEMES
+        </button>
+      </div>
       <div class="dial-grid">
         <div class="stage" id="preview-stage"></div>
         <div class="controls">
@@ -201,16 +282,26 @@
         <a href="../premium/premium.html">Upgrade →</a>
       </div>
 
-      <!-- Slot 1 · NORTH · free -->
+      <!-- Slot 1 · NORTH · free · has mode dropdown -->
       <div class="slot" id="slot-1-row">
         <span class="tag">SLOT 1<b>NORTH</b></span>
         <div class="fav" id="favicon-1"></div>
+        <select class="slot-mode" id="slot-1-mode">
+          <option value="url">Open Link</option>
+          <option value="screenshot">Screenshot</option>
+          <option value="newtab">New Tab</option>
+        </select>
         <input type="url" id="slot-1-url" placeholder="https://your-link.com" autocomplete="off" spellcheck="false" />
       </div>
-      <!-- Slot 2 · NE · premium -->
+      <!-- Slot 2 · NE · premium · has mode dropdown -->
       <div class="slot locked" id="slot-2-row">
         <span class="tag">SLOT 2<b>NE</b></span>
         <div class="fav" id="favicon-2"></div>
+        <select class="slot-mode" id="slot-2-mode">
+          <option value="url">Open Link</option>
+          <option value="screenshot">Screenshot</option>
+          <option value="newtab">New Tab</option>
+        </select>
         <input type="url" id="slot-2-url" placeholder="Premium — https://your-link.com" autocomplete="off" spellcheck="false" disabled />
         <span class="lock-badge" data-lockbadge="2"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>PREMIUM</span>
       </div>
@@ -238,10 +329,95 @@
 
       <div class="hint" style="font-family:var(--mono);font-size:10px;color:var(--text-mute);margin-top:6px">
         Fixed directions — West = Back, East = Forward, South = Reload — are always on and need no setup.
+        Slot 1 &amp; Slot 2 can also be set to Screenshot or New Tab instead of a link.
+      </div>
+    </section>
+
+    <!-- Sound catalog -->
+    <section class="card">
+      <div class="card-title"><span class="card-num">3</span> SLOT-CHANGE SOUND</div>
+      <div id="sound-list"></div>
+
+      <div class="custom-sound-box" id="custom-sound-panel">
+        <h4>CUSTOM SOUND (PREMIUM)</h4>
+        <label class="file-btn" for="custom-sound-file">
+          ⬆ UPLOAD AUDIO FILE
+          <input type="file" id="custom-sound-file" accept="audio/*" style="display:none" />
+        </label>
+        <div id="custom-sound-current">No custom sound saved yet.</div>
+
+        <div id="trim-panel">
+          <div id="trim-duration" class="hint" style="font-family:var(--mono);font-size:10px;color:var(--text-mute);margin-bottom:10px"></div>
+          <div class="trim-row">
+            <label>Start (seconds)</label>
+            <input type="range" id="trim-start" min="0" max="10" step="0.01" value="0" />
+          </div>
+          <div class="trim-row">
+            <label>End (seconds) — max 2s total selection</label>
+            <input type="range" id="trim-end" min="0" max="10" step="0.01" value="2" />
+          </div>
+          <div id="trim-range-label" class="hint" style="font-family:var(--mono);font-size:11px;color:var(--purple-bright)"></div>
+          <div class="trim-actions">
+            <button type="button" id="trim-preview-btn">▶ PREVIEW SELECTION</button>
+            <button type="button" id="trim-save-btn">SAVE AS MY SOUND</button>
+          </div>
+        </div>
+      </div>
+      <div class="upgrade" id="custom-sound-lock" style="margin-top:14px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Upload your own tick sound (trim up to 2s) — unlocks with Premium.
+        <a href="../premium/premium.html">Upgrade →</a>
+      </div>
+    </section>
+
+    <!-- Import / Export -->
+    <section class="card">
+      <div class="card-title"><span class="card-num">4</span> IMPORT / EXPORT SETTINGS</div>
+
+      <div id="io-locked" class="upgrade">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Save / restore your whole configuration as a file — unlocks with Premium.
+        <a href="../premium/premium.html">Upgrade →</a>
+      </div>
+
+      <div id="io-unlocked" style="display:none">
+        <div class="io-row">
+          <button class="io-btn" id="export-btn" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+            EXPORT CONFIG (.JSON)
+          </button>
+          <label class="io-btn" for="import-file" style="margin:0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0l-4 4m4-4l4 4M4 5h16"/></svg>
+            IMPORT CONFIG (.JSON)
+            <input type="file" id="import-file" accept="application/json" style="display:none" />
+          </label>
+        </div>
+        <div class="io-note">
+          Branded MOUSSY export — FREE settings applied first, then PREMIUM settings (only if this account is on a paid plan).
+        </div>
       </div>
     </section>
 
   </main>
+
+  <!-- Appearance tray -->
+  <div id="tray-backdrop"></div>
+  <aside id="appearance-tray" aria-label="Colours and themes">
+    <div class="tray-head">
+      <h2>APPEARANCE</h2>
+      <button id="tray-close" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="tray-body">
+      <div>
+        <div class="tray-section-title">COLOR — any plan, pick any swatch</div>
+        <div class="swatches" id="color-swatches"></div>
+      </div>
+      <div>
+        <div class="tray-section-title">THEME — structural redesign, premium only</div>
+        <div class="theme-cards" id="theme-cards"></div>
+      </div>
+    </div>
+  </aside>
 
   <div id="toast" role="status" aria-live="polite"></div>
   <script src="settings.js"></script>

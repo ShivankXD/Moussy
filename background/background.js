@@ -47,6 +47,10 @@ const STORAGE_PAUSE_HOSTS  = 'moussy_paused_hosts';   // string[]
 const STORAGE_DIAL_SIZE    = 'moussy_dial_size';      // number (scale ~0.82)
 const STORAGE_DIAL_OPACITY = 'moussy_dial_opacity';   // number (band alpha 0..1)
 const STORAGE_DIAL_DELAY   = 'moussy_dial_delay';     // number (hold ms, default 500)
+const STORAGE_DIAL_COLOR   = 'moussy_dial_color';     // key into DIAL_COLORS (free)
+const STORAGE_DIAL_THEME   = 'moussy_dial_theme';     // key into DIAL_THEMES (premium)
+const STORAGE_SOUND_ID     = 'moussy_sound_id';       // key into SOUND_CATALOG
+const STORAGE_SOUND_CUSTOM = 'moussy_sound_custom';   // { dataUrl } trimmed clip (premium)
 
 const OFFSCREEN_URL       = 'offscreen/offscreen.html';
 // NOTE: chrome.offscreen.Reason.AUDIO_PLAYBACK is used directly in createDocument().
@@ -177,6 +181,10 @@ const StateManager = {
       STORAGE_INSTALL,
       STORAGE_PAUSE_GLOBAL,
       STORAGE_PAUSE_HOSTS,
+      STORAGE_DIAL_COLOR,
+      STORAGE_DIAL_THEME,
+      STORAGE_SOUND_ID,
+      STORAGE_SOUND_CUSTOM,
     ]);
   },
 };
@@ -570,6 +578,24 @@ async function handleMessage(message, sender) {
       return { ok: true };
     }
 
+    // ── Radial-dial "Screenshot" slot (Slot 1 free, Slot 2 premium) ───────
+    // Premium gating for this already happened client-side (the dial only
+    // ever fires this for an unlocked slot), so no plan check here — this is
+    // deliberately a different, ungated path from the legacy PREMIUM_SCREENSHOT
+    // message below.
+    case 'CAPTURE_SCREENSHOT': {
+      const tab = sender.tab ?? await getActiveTab();
+      if (!tab) return { ok: false, error: 'No active tab' };
+      const result = await ScreenshotManager.capture(tab, sender.tab?.id);
+      return { ok: result.success, ...result };
+    }
+
+    // ── Radial-dial "New Tab" slot ─────────────────────────────────────────
+    case 'OPEN_NEW_TAB': {
+      await chrome.tabs.create({});
+      return { ok: true };
+    }
+
     // ── Premium screenshot request ────────────────────────────────────────
     case 'PREMIUM_SCREENSHOT': {
       const premium = await StateManager.isPremium();
@@ -643,6 +669,10 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
       [STORAGE_DIAL_SIZE]:     0.82,   // a touch smaller than base
       [STORAGE_DIAL_OPACITY]:  0.55,   // violet/black band mix
       [STORAGE_DIAL_DELAY]:    500,    // hold 0.5s before the dial opens
+      [STORAGE_DIAL_COLOR]:    'violet',
+      [STORAGE_DIAL_THEME]:    'classic',
+      [STORAGE_SOUND_ID]:      'classic',
+      [STORAGE_SOUND_CUSTOM]:  null,
       [STORAGE_INSTALL]:       new Date().toISOString(),
     });
 
@@ -653,7 +683,10 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
 
   } else if (reason === 'update') {
     // ── Update: migrate storage keys if needed (future-proofing) ──────
-    const existing = await storageGet([STORAGE_PLAN, STORAGE_PAUSE_GLOBAL, STORAGE_PAUSE_HOSTS, STORAGE_DIAL_SIZE, STORAGE_DIAL_OPACITY, STORAGE_DIAL_DELAY]);
+    const existing = await storageGet([
+      STORAGE_PLAN, STORAGE_PAUSE_GLOBAL, STORAGE_PAUSE_HOSTS, STORAGE_DIAL_SIZE, STORAGE_DIAL_OPACITY,
+      STORAGE_DIAL_DELAY, STORAGE_DIAL_COLOR, STORAGE_DIAL_THEME, STORAGE_SOUND_ID, STORAGE_SOUND_CUSTOM,
+    ]);
     const seed = {};
     if (existing[STORAGE_PLAN]         === undefined) seed[STORAGE_PLAN]         = 'free';
     if (existing[STORAGE_PAUSE_GLOBAL] === undefined) seed[STORAGE_PAUSE_GLOBAL] = false;
@@ -661,6 +694,10 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
     if (existing[STORAGE_DIAL_SIZE]    === undefined) seed[STORAGE_DIAL_SIZE]    = 0.82;
     if (existing[STORAGE_DIAL_OPACITY] === undefined) seed[STORAGE_DIAL_OPACITY] = 0.55;
     if (existing[STORAGE_DIAL_DELAY]   === undefined) seed[STORAGE_DIAL_DELAY]   = 500;
+    if (existing[STORAGE_DIAL_COLOR]   === undefined) seed[STORAGE_DIAL_COLOR]   = 'violet';
+    if (existing[STORAGE_DIAL_THEME]   === undefined) seed[STORAGE_DIAL_THEME]   = 'classic';
+    if (existing[STORAGE_SOUND_ID]     === undefined) seed[STORAGE_SOUND_ID]     = 'classic';
+    if (existing[STORAGE_SOUND_CUSTOM] === undefined) seed[STORAGE_SOUND_CUSTOM] = null;
     if (Object.keys(seed).length) await storageSet(seed);
     console.log(`[MOUSSY] Updated from ${previousVersion}. Storage migration complete.`);
   }
