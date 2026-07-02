@@ -85,6 +85,11 @@
     #timezone-select{width:100%;background:#0e0e16;border:1px solid var(--border-bright);border-radius:7px;color:var(--text);
       font-family:var(--mono);font-size:12px;padding:9px 10px;outline:none;cursor:pointer}
     #timezone-select:focus{border-color:var(--purple)}
+    .seg-toggle{display:flex;gap:6px}
+    .seg-btn{flex:1;background:#0e0e16;border:1px solid var(--border-bright);border-radius:7px;color:var(--text-dim);
+      font-family:var(--mono);font-size:12px;padding:9px 8px;cursor:pointer;transition:all .12s}
+    .seg-btn:hover{border-color:var(--purple)}
+    .seg-btn.active{background:rgba(168,85,247,0.18);border-color:var(--purple);color:var(--text)}
 
     /* dial config grid */
     .dial-grid{display:grid;grid-template-columns:minmax(300px,1fr) 320px;gap:24px;align-items:stretch}
@@ -308,16 +313,24 @@
               <div class="ctrl">
                 <label>Hold to activate <span class="v">seconds</span></label>
                 <div class="delay-box">
-                  <input type="number" id="delay-input" min="0" max="5" step="0.1" value="0.5" />
+                  <input type="number" id="delay-input" min="0" max="5" step="0.1" value="0.1" />
                   <span class="unit">sec hold</span>
                 </div>
-                <div class="delay-warn ok" id="delay-warn">✓ Comfortable range (default 0.5s).</div>
-                <div class="hint">⚠ Default is <b>0.5s</b> — type any value. Below ~0.1s fires on normal right-clicks; above ~1s gets tiring.</div>
+                <div class="delay-warn ok" id="delay-warn">✓ Snappy range (default 0.1s).</div>
+                <div class="hint">⚠ Default is <b>0.1s</b> — type any value. Holding <b>&gt;0.5s</b> can make using the mouse gesture boring.</div>
               </div>
               <div class="ctrl" id="timezone-ctrl" style="display:none">
                 <label>Timezone</label>
                 <select id="timezone-select"></select>
                 <div class="hint">Used to show the correct live time for this clock design.</div>
+              </div>
+              <div class="ctrl" id="numerals-ctrl" style="display:none">
+                <label>Number style</label>
+                <div class="seg-toggle">
+                  <button type="button" class="seg-btn" id="numerals-roman" data-val="roman">Roman · XII</button>
+                  <button type="button" class="seg-btn" id="numerals-english" data-val="english">English · 12</button>
+                </div>
+                <div class="hint">Show the clock face in Roman numerals or plain 12-hour numbers.</div>
               </div>
 
               <div class="profile-actions">

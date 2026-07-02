@@ -670,7 +670,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
       [STORAGE_PAUSE_HOSTS]:   [],
       [STORAGE_DIAL_SIZE]:     0.82,   // a touch smaller than base
       [STORAGE_DIAL_OPACITY]:  0.55,   // violet/black band mix
-      [STORAGE_DIAL_DELAY]:    500,    // hold 0.5s before the dial opens
+      [STORAGE_DIAL_DELAY]:    100,    // hold 0.1s before the dial opens
       [STORAGE_DIAL_COLOR]:    'violet',
       [STORAGE_DIAL_THEME]:    'classic',
       [STORAGE_SOUND_ID]:      'classic',
@@ -698,7 +698,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
     if (existing[STORAGE_PAUSE_HOSTS]  === undefined) seed[STORAGE_PAUSE_HOSTS]  = [];
     if (existing[STORAGE_DIAL_SIZE]    === undefined) seed[STORAGE_DIAL_SIZE]    = 0.82;
     if (existing[STORAGE_DIAL_OPACITY] === undefined) seed[STORAGE_DIAL_OPACITY] = 0.55;
-    if (existing[STORAGE_DIAL_DELAY]   === undefined) seed[STORAGE_DIAL_DELAY]   = 500;
+    if (existing[STORAGE_DIAL_DELAY]   === undefined) seed[STORAGE_DIAL_DELAY]   = 100;
     if (existing[STORAGE_DIAL_COLOR]   === undefined) seed[STORAGE_DIAL_COLOR]   = 'violet';
     if (existing[STORAGE_DIAL_THEME]   === undefined) seed[STORAGE_DIAL_THEME]   = 'classic';
     if (existing[STORAGE_SOUND_ID]     === undefined) seed[STORAGE_SOUND_ID]     = 'classic';

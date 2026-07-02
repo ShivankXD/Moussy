@@ -85,7 +85,7 @@ const CFG = Object.freeze({
 
   DEFAULT_SIZE:         0.82,   // a touch smaller than base
   DEFAULT_OPACITY:      0.55,   // violet/black band mix
-  DEFAULT_DELAY:        500,    // ms of right-hold before the dial opens
+  DEFAULT_DELAY:        100,    // ms of right-hold before the dial opens
 });
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -293,6 +293,7 @@ const Store = (() => {
         opacity:  typeof s.opacity === 'number' ? clamp(s.opacity, 0, 1)  : CFG.DEFAULT_OPACITY,
         delay:    typeof s.delay === 'number'   ? clamp(s.delay, 0, 3000) : CFG.DEFAULT_DELAY,
         timezone: (typeof s.timezone === 'string' && s.timezone) ? s.timezone : DEFAULT_TIMEZONE,
+        numerals: s.numerals === 'english' ? 'english' : 'roman',
       };
     },
 
@@ -496,6 +497,7 @@ class RadialDialHUD {
       this._theme = DEFAULT_THEME; // unused outside 'radial'
     }
     this._timezone = opts.timezone || DEFAULT_TIMEZONE;
+    this._numerals = opts.numerals === 'english' ? 'english' : 'roman';
 
     const s = clamp(opts.scale ?? 1, 0.5, 1.6);
     this._bandAlpha = clamp(opts.bandAlpha ?? CFG.DEFAULT_OPACITY, 0, 1);
@@ -968,8 +970,12 @@ class RadialDialHUD {
     defs.innerHTML = `
       <filter id="skinGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       <filter id="skinGlowStrong" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="skinGlowXL" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       <linearGradient id="skBand" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${hexRgba(accent, a * 0.45)}"/><stop offset="100%" stop-color="rgba(8,6,14,${a * 0.75})"/></linearGradient>
       <linearGradient id="skActive" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${hexRgba(accent, Math.max(0.55, a))}"/><stop offset="100%" stop-color="${hexRgba(bright, Math.max(0.6, a))}"/></linearGradient>
+      <radialGradient id="skAura" cx="50%" cy="50%" r="50%"><stop offset="55%" stop-color="${hexRgba(accent, 0)}"/><stop offset="82%" stop-color="${hexRgba(accent, 0.30)}"/><stop offset="100%" stop-color="${hexRgba(accent, 0)}"/></radialGradient>
+      <radialGradient id="skCore" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${hexRgba(bright, 0.95)}"/><stop offset="60%" stop-color="${hexRgba(accent, 0.65)}"/><stop offset="100%" stop-color="${hexRgba(accent, 0)}"/></radialGradient>
+      <radialGradient id="skRingGrad" cx="50%" cy="50%" r="50%"><stop offset="86%" stop-color="${hexRgba(bright, 0)}"/><stop offset="93%" stop-color="${hexRgba(bright, 0.9)}"/><stop offset="100%" stop-color="${hexRgba(accent, 0)}"/></radialGradient>
     `;
     svg.appendChild(defs);
 
@@ -1044,24 +1050,52 @@ class RadialDialHUD {
   _skin_ghost(svg, el) {
     const { c, RO, RI, s } = this.dim;
     const { accent, bright } = this._color;
-    // multi-layer glowing wispy ring
-    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 2 * s, fill: 'none', stroke: hexRgba(bright, 0.28), 'stroke-width': 7 * s, filter: 'url(#skinGlowStrong)' }));
-    svg.appendChild(el('circle', { cx: c, cy: c, r: RO, fill: 'none', stroke: hexRgba(bright, 0.6), 'stroke-width': 2 * s, filter: 'url(#skinGlow)' }));
-    svg.appendChild(el('circle', { cx: c, cy: c, r: RO - 3 * s, fill: 'none', stroke: hexRgba(accent, 0.35), 'stroke-width': 1 * s, 'stroke-dasharray': '1 6' }));
-    // ghost silhouettes straddling the ring edge (mostly outside → stay visible)
-    [22, 96, 168, 262, 322].forEach((deg, i) => {
-      const a = deg * Math.PI / 180, gr = RO + (i % 2 ? 4 : 9) * s;
-      const x = c + gr * Math.cos(a), y = c + gr * Math.sin(a);
-      const g = el('g', { transform: `translate(${x} ${y}) scale(${s * (0.5 + (i % 2) * 0.14)})`, opacity: '0.92' });
-      g.appendChild(el('path', { d: 'M-9 5 C-9 -9 9 -9 9 5 L9 11 L5 7 L1 11 L-3 7 L-7 11 Z', fill: hexRgba(bright, 0.6), filter: 'url(#skinGlow)' }));
-      g.appendChild(el('circle', { cx: -3, cy: -1, r: 1.2, fill: '#1a0f2e' }));
-      g.appendChild(el('circle', { cx: 3, cy: -1, r: 1.2, fill: '#1a0f2e' }));
+    // soft ethereal halo behind everything
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 16 * s, fill: 'url(#skAura)' }));
+    // layered plasma ring: broad soft glow → bright core → turbulent wisps
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO, fill: 'none', stroke: hexRgba(bright, 0.16), 'stroke-width': 12 * s, filter: 'url(#skinGlowXL)' }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 1 * s, fill: 'none', stroke: hexRgba(accent, 0.5), 'stroke-width': 5 * s, filter: 'url(#skinGlowStrong)' }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO, fill: 'none', stroke: hexRgba(bright, 0.85), 'stroke-width': 1.8 * s, filter: 'url(#skinGlow)' }));
+    // long smoky wisps curling off the ring (ethereal mist, not clean flames)
+    for (let i = 0; i < 14; i++) {
+      const a = (i * (360 / 14) + prand(i) * 22) * Math.PI / 180;
+      const rr = RO + (prand(i + 5) - 0.4) * 5 * s;
+      const x0 = c + rr * Math.cos(a), y0 = c + rr * Math.sin(a);
+      const swirl = (prand(i + 7) - 0.5) * 1.2;         // tangential curl
+      const flr = RO + (6 + prand(i + 9) * 14) * s;
+      const mx = c + flr * Math.cos(a + swirl * 0.4), my = c + flr * Math.sin(a + swirl * 0.4);
+      const flr2 = RO + (10 + prand(i + 11) * 16) * s;
+      const ex = c + flr2 * Math.cos(a + swirl), ey = c + flr2 * Math.sin(a + swirl);
+      svg.appendChild(el('path', { d: `M${x0} ${y0} Q ${mx} ${my} ${ex} ${ey}`, fill: 'none', stroke: hexRgba(bright, 0.22 + prand(i) * 0.18), 'stroke-width': (0.8 + prand(i + 3) * 1.4) * s, 'stroke-linecap': 'round', filter: 'url(#skinGlowStrong)' }));
+    }
+    // extra turbulent smoke rings hugging the band (broken dashes read as fog)
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO - 6 * s, fill: 'none', stroke: hexRgba(bright, 0.18), 'stroke-width': 3 * s, 'stroke-dasharray': `${9 * s} ${14 * s}`, filter: 'url(#skinGlowStrong)' }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 5 * s, fill: 'none', stroke: hexRgba(accent, 0.25), 'stroke-width': 2.2 * s, 'stroke-dasharray': `${5 * s} ${11 * s}`, filter: 'url(#skinGlowStrong)' }));
+    // spectral phantoms: elongated, translucent, with tattered dissolving tails
+    const ghost = (x, y, sc, op, rot) => {
+      const g = el('g', { transform: `translate(${x} ${y}) rotate(${rot}) scale(${sc})`, opacity: op });
+      // motion-trail wisp streaming off behind the spectre
+      g.appendChild(el('path', { d: 'M-7 8 Q -14 12 -20 10 Q -14 14 -6 12', fill: hexRgba(bright, 0.18), filter: 'url(#skinGlowStrong)' }));
+      // faint smoke halo behind the body
+      g.appendChild(el('ellipse', { cx: 0, cy: -1, rx: 10, ry: 13, fill: hexRgba(bright, 0.12), filter: 'url(#skinGlowStrong)' }));
+      // hooded spectre body with ragged, uneven trailing tails
+      g.appendChild(el('path', { d: 'M-8 4 C-9 -13 9 -13 8 4 L8 10 L5.5 5 L3 13 L0.5 6 L-2 14 L-4.5 6 L-7 11 Z', fill: hexRgba(bright, 0.42), stroke: hexRgba(bright, 0.7), 'stroke-width': 0.5, filter: 'url(#skinGlow)' }));
+      // hollow sunken eyes + a wailing mouth
+      g.appendChild(el('ellipse', { cx: -3, cy: -3, rx: 1.6, ry: 2.4, fill: '#0a0616' }));
+      g.appendChild(el('ellipse', { cx: 3, cy: -3, rx: 1.6, ry: 2.4, fill: '#0a0616' }));
+      g.appendChild(el('ellipse', { cx: 0, cy: 2, rx: 1.4, ry: 2.2, fill: '#0a0616' }));
       svg.appendChild(g);
+    };
+    // six spirits at varied depth, size and drift-tilt (feels like circling prey)
+    [[26, RO + 10, 0.72, 0.92, 14], [88, RO + 6, 0.44, 0.6, -10], [150, RO + 11, 0.82, 0.95, 8],
+     [205, RO + 4, 0.5, 0.55, -16], [258, RO - 1, 0.62, 0.8, 12], [318, RO + 9, 0.7, 0.88, -8]].forEach(([deg, gr, sc, op, rot]) => {
+      const a = deg * Math.PI / 180;
+      ghost(c + gr * Math.cos(a), c + gr * Math.sin(a), s * sc, String(op), rot);
     });
-    // drifting mist wisps outside the ring
-    for (let i = 0; i < 12; i++) {
-      const a = prand(i) * Math.PI * 2, r = RO + (2 + prand(i + 40) * 14) * s;
-      svg.appendChild(el('circle', { cx: c + r * Math.cos(a), cy: c + r * Math.sin(a), r: (0.6 + prand(i + 80)) * s, fill: hexRgba(bright, 0.4) }));
+    // drifting soul-motes
+    for (let i = 0; i < 16; i++) {
+      const a = prand(i) * Math.PI * 2, r = RO + (2 + prand(i + 40) * 18) * s;
+      svg.appendChild(el('circle', { cx: c + r * Math.cos(a), cy: c + r * Math.sin(a), r: (0.4 + prand(i + 80) * 1.2) * s, fill: hexRgba(bright, 0.4), filter: 'url(#skinGlow)' }));
     }
   }
 
@@ -1069,6 +1103,8 @@ class RadialDialHUD {
   _skin_magic(svg, el) {
     const { c, RO, RI, s } = this.dim;
     const { accent, bright } = this._color;
+    // mystical aura
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 18 * s, fill: 'url(#skAura)' }));
     // outer concentric magic-circle rings
     svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 12 * s, fill: 'none', stroke: hexRgba(accent, 0.35), 'stroke-width': 0.8 * s }));
     svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 7 * s, fill: 'none', stroke: hexRgba(bright, 0.5), 'stroke-width': 1 * s, filter: 'url(#skinGlow)' }));
@@ -1081,17 +1117,27 @@ class RadialDialHUD {
       const x = c + Rr * Math.cos(a), y = c + Rr * Math.sin(a);
       svg.appendChild(el('path', { d: runes[i % runes.length], transform: `translate(${x} ${y}) rotate(${i * 30 + 90}) scale(${s * 0.9})`, fill: 'none', stroke: hexRgba(bright, 0.7), 'stroke-width': 0.8, 'stroke-linecap': 'round' }));
     }
-    // inner heptagram (7-point star) in the centre hole
+    // faint radiant light rays streaming inward toward the star
+    for (let i = 0; i < 24; i++) {
+      const a = (i * 15) * Math.PI / 180, r0 = RI * 0.78, r1 = RI * 0.95;
+      svg.appendChild(el('line', { x1: c + r0 * Math.cos(a), y1: c + r0 * Math.sin(a), x2: c + r1 * Math.cos(a), y2: c + r1 * Math.sin(a), stroke: hexRgba(bright, i % 2 ? 0.28 : 0.14), 'stroke-width': 0.6 * s }));
+    }
+    // inner heptagram (7-point star) in the centre hole — the enchanted sigil
     const Rh = RI * 0.72;
     const hp = []; for (let i = 0; i < 7; i++) { const a = (-90 + i * (360 * 3 / 7)) * Math.PI / 180; hp.push(`${c + Rh * Math.cos(a)},${c + Rh * Math.sin(a)}`); }
-    svg.appendChild(el('polygon', { points: hp.join(' '), fill: 'none', stroke: hexRgba(bright, 0.7), 'stroke-width': 1 * s, filter: 'url(#skinGlow)' }));
+    svg.appendChild(el('polygon', { points: hp.join(' '), fill: hexRgba(accent, 0.12), stroke: hexRgba(bright, 0.75), 'stroke-width': 1 * s, filter: 'url(#skinGlow)' }));
     svg.appendChild(el('circle', { cx: c, cy: c, r: Rh, fill: 'none', stroke: hexRgba(accent, 0.4), 'stroke-width': 0.6 * s }));
     svg.appendChild(el('circle', { cx: c, cy: c, r: Rh * 0.52, fill: 'none', stroke: hexRgba(bright, 0.4), 'stroke-width': 0.6 * s, 'stroke-dasharray': '2 2' }));
-    // sparkle dust outside
-    for (let i = 0; i < 10; i++) {
-      const a = prand(i) * Math.PI * 2, r = RO + (2 + prand(i + 30) * 12) * s;
-      const x = c + r * Math.cos(a), y = c + r * Math.sin(a);
-      svg.appendChild(el('path', { d: `M${x-1.5} ${y} L${x} ${y-1.5} L${x+1.5} ${y} L${x} ${y+1.5} Z`, fill: hexRgba(bright, 0.6) }));
+    // glowing arcane core
+    svg.appendChild(el('circle', { cx: c, cy: c, r: 5 * s, fill: 'url(#skCore)' }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: 1.8 * s, fill: bright, filter: 'url(#skinGlowStrong)' }));
+    // twinkling spell-sparkles (4-point stars) drifting around the circle
+    const twinkle = (x, y, r, op) => {
+      svg.appendChild(el('path', { d: `M${x} ${y-r} Q ${x+r*0.16} ${y-r*0.16} ${x+r} ${y} Q ${x+r*0.16} ${y+r*0.16} ${x} ${y+r} Q ${x-r*0.16} ${y+r*0.16} ${x-r} ${y} Q ${x-r*0.16} ${y-r*0.16} ${x} ${y-r} Z`, fill: hexRgba(bright, op), filter: 'url(#skinGlow)' }));
+    };
+    for (let i = 0; i < 16; i++) {
+      const a = prand(i) * Math.PI * 2, r = RO + (2 + prand(i + 30) * 14) * s;
+      twinkle(c + r * Math.cos(a), c + r * Math.sin(a), (1.2 + prand(i + 60) * 2.4) * s, 0.45 + prand(i) * 0.4);
     }
   }
 
@@ -1100,22 +1146,39 @@ class RadialDialHUD {
     const { c, RO, RI, s } = this.dim;
     const { accent, bright } = this._color;
     const p = (r, a) => `${c + r * Math.cos(a)} ${c + r * Math.sin(a)}`;
-    // 8 dark stone plates with gaps
+    // faint red aura bleeding from the ring
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 14 * s, fill: 'url(#skAura)' }));
+    // 8 dark rocky stone plates with gaps and jagged outer edges
     for (let i = 0; i < 8; i++) {
-      const a0 = (-90 + i * 45 - 19) * Math.PI / 180, a1 = (-90 + i * 45 + 19) * Math.PI / 180;
-      const ro = RO + 3 * s, ri = RO - 3 * s;
-      const d = `M ${p(ro, a0)} A ${ro} ${ro} 0 0 1 ${p(ro, a1)} L ${p(ri, a1)} A ${ri} ${ri} 0 0 0 ${p(ri, a0)} Z`;
-      svg.appendChild(el('path', { d, fill: 'rgba(14,10,12,0.92)', stroke: hexRgba(accent, 0.5), 'stroke-width': 0.8 * s }));
+      const a0 = (-90 + i * 45 - 19) * Math.PI / 180, am = (-90 + i * 45) * Math.PI / 180, a1 = (-90 + i * 45 + 19) * Math.PI / 180;
+      const ro = RO + (2 + prand(i) * 4) * s, rm = RO + (5 + prand(i + 3) * 4) * s, ri = RO - 4 * s;
+      // outer edge chipped: a0 → mid bump → a1, then back along inner arc
+      const d = `M ${p(ro, a0)} L ${p(rm, am)} L ${p(ro, a1)} L ${p(ri, a1)} A ${ri} ${ri} 0 0 0 ${p(ri, a0)} Z`;
+      svg.appendChild(el('path', { d, fill: 'rgba(12,9,11,0.95)', stroke: hexRgba(accent, 0.55), 'stroke-width': 0.9 * s, filter: 'url(#skinGlow)' }));
+      // inner plate highlight
+      svg.appendChild(el('path', { d: `M ${p(RO - 4 * s, a0)} A ${RO - 4 * s} ${RO - 4 * s} 0 0 1 ${p(RO - 4 * s, a1)}`, fill: 'none', stroke: hexRgba(accent, 0.3), 'stroke-width': 0.6 * s }));
     }
     // glowing red cracks radiating between plates
     for (let i = 0; i < 8; i++) {
       const a = (-67.5 + i * 45) * Math.PI / 180;
-      svg.appendChild(el('line', { x1: c + (RO - 3 * s) * Math.cos(a), y1: c + (RO - 3 * s) * Math.sin(a), x2: c + (RO + 7 * s) * Math.cos(a), y2: c + (RO + 7 * s) * Math.sin(a), stroke: hexRgba(accent, 0.75), 'stroke-width': 0.8 * s, filter: 'url(#skinGlow)' }));
+      svg.appendChild(el('line', { x1: c + (RO - 6 * s) * Math.cos(a), y1: c + (RO - 6 * s) * Math.sin(a), x2: c + (RO + 8 * s) * Math.cos(a), y2: c + (RO + 8 * s) * Math.sin(a), stroke: hexRgba(accent, 0.8), 'stroke-width': 0.9 * s, filter: 'url(#skinGlowStrong)' }));
     }
-    // red shuriken in the centre hole
-    const g = el('g', { transform: `translate(${c} ${c}) scale(${s * 0.9})` });
-    for (let i = 0; i < 4; i++) g.appendChild(el('path', { d: 'M0 0 L4 -16 L9 -5 Z', fill: hexRgba(accent, 0.6), transform: `rotate(${i * 90})`, filter: 'url(#skinGlow)' }));
-    g.appendChild(el('circle', { cx: 0, cy: 0, r: 3, fill: 'none', stroke: hexRgba(bright, 0.7), 'stroke-width': 1 }));
+    // proper 4-point throwing star (shuriken) with a bladed silhouette + hole
+    const shR = RI * 0.62, shr = shR * 0.34;   // outer point / inner notch radii
+    const g = el('g', { transform: `translate(${c} ${c})` });
+    const star = [];
+    for (let i = 0; i < 8; i++) {
+      const rr = i % 2 === 0 ? shR : shr;
+      const a = (-90 + i * 45) * Math.PI / 180;
+      star.push(`${rr * Math.cos(a)},${rr * Math.sin(a)}`);
+    }
+    g.appendChild(el('polygon', { points: star.join(' '), fill: hexRgba(accent, 0.85), stroke: bright, 'stroke-width': 0.8 * s, 'stroke-linejoin': 'miter', filter: 'url(#skinGlowStrong)' }));
+    // bevel highlight down each blade
+    for (let i = 0; i < 4; i++) {
+      const a = (-90 + i * 90) * Math.PI / 180;
+      g.appendChild(el('line', { x1: 0, y1: 0, x2: shR * Math.cos(a), y2: shR * Math.sin(a), stroke: hexRgba(bright, 0.5), 'stroke-width': 0.6 * s }));
+    }
+    g.appendChild(el('circle', { cx: 0, cy: 0, r: shr * 0.7, fill: 'rgba(10,7,9,0.95)', stroke: hexRgba(bright, 0.8), 'stroke-width': 1 * s }));
     svg.appendChild(g);
     // kanji top/bottom (CJK — widely supported)
     const kanji = (ch, dy) => { const t = el('text', { x: c, y: c + dy, fill: hexRgba(accent, 0.9), 'font-size': 13 * s, 'font-family': "'Segoe UI',sans-serif", 'font-weight': '700', 'text-anchor': 'middle', filter: 'url(#skinGlow)' }); t.textContent = ch; svg.appendChild(t); };
@@ -1130,32 +1193,50 @@ class RadialDialHUD {
   _skin_aclock(svg, el) {
     const { c, RO, RI, s } = this.dim;
     const { accent, bright } = this._color;
-    // bezel: outer ring + inner "clock face" ring, faint dark face for legibility
-    svg.appendChild(el('circle', { cx: c, cy: c, r: RO, fill: 'none', stroke: hexRgba(bright, 0.7), 'stroke-width': 1.6 * s, filter: 'url(#skinGlow)' }));
-    svg.appendChild(el('circle', { cx: c, cy: c, r: RI, fill: 'rgba(8,7,14,0.4)', stroke: hexRgba(accent, 0.5), 'stroke-width': 1 * s }));
-    const numerals = ['XII','I','II','III','IIII','V','VI','VII','VIII','IX','X','XI'];
-    const Rn = RI * 0.78;
+    // solid metallic bezel: glow + outer ring + brushed inner bezel + opaque face
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 1 * s, fill: 'none', stroke: hexRgba(accent, 0.5), 'stroke-width': 4.5 * s, filter: 'url(#skinGlowStrong)' }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO, fill: 'none', stroke: hexRgba(bright, 0.95), 'stroke-width': 2.4 * s, filter: 'url(#skinGlow)' }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RI + 4 * s, fill: 'none', stroke: hexRgba(accent, 0.7), 'stroke-width': 2.6 * s }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RI + 1.5 * s, fill: 'rgba(9,8,17,0.9)', stroke: hexRgba(bright, 0.4), 'stroke-width': 0.8 * s }));
+    // minute + hour ticks (hour ticks longer & brighter)
+    for (let i = 0; i < 60; i++) {
+      const a = (i * 6) * Math.PI / 180;
+      const hour = i % 5 === 0;
+      const r0 = RI * (hour ? 0.84 : 0.92), r1 = RI * 0.99;
+      svg.appendChild(el('line', { x1: c + r0 * Math.cos(a), y1: c + r0 * Math.sin(a), x2: c + r1 * Math.cos(a), y2: c + r1 * Math.sin(a), stroke: hexRgba(hour ? bright : accent, hour ? 0.9 : 0.45), 'stroke-width': (hour ? 1.5 : 0.6) * s }));
+    }
+    // numerals — roman (default) or english 12-hour, per design setting
+    const roman   = ['XII','I','II','III','IIII','V','VI','VII','VIII','IX','X','XI'];
+    const english = ['12','1','2','3','4','5','6','7','8','9','10','11'];
+    const numerals = this._numerals === 'english' ? english : roman;
+    const Rn = RI * 0.72;
     numerals.forEach((num, i) => {
       const a = (i * 30 - 90) * Math.PI / 180;
       const x = c + Rn * Math.cos(a), y = c + Rn * Math.sin(a);
-      const t = el('text', { x, y: y + 2.4 * s, fill: hexRgba(bright, 0.9), 'font-size': 7 * s, 'font-family': "'Georgia',serif", 'text-anchor': 'middle' });
+      const t = el('text', { x, y: y + 2.7 * s, fill: bright, 'font-size': 8 * s, 'font-family': "'Georgia','Times New Roman',serif", 'font-weight': '700', 'text-anchor': 'middle' });
       t.textContent = num;
       svg.appendChild(t);
     });
-    for (let i = 0; i < 60; i++) {
-      if (i % 5 === 0) continue;
-      const a = (i * 6) * Math.PI / 180;
-      const r0 = RI * 0.9, r1 = RI * 0.96;
-      svg.appendChild(el('line', { x1: c + r0 * Math.cos(a), y1: c + r0 * Math.sin(a), x2: c + r1 * Math.cos(a), y2: c + r1 * Math.sin(a), stroke: hexRgba(accent, 0.4), 'stroke-width': 0.5 * s }));
-    }
-    const hourEl = el('line', { x1: c, y1: c, x2: c, y2: c - RI * 0.42 }, undefined);
-    hourEl.setAttribute('stroke', bright); hourEl.setAttribute('stroke-width', 2.2 * s); hourEl.setAttribute('stroke-linecap', 'round'); hourEl.setAttribute('filter', 'url(#skinGlow)');
-    const minEl = el('line', { x1: c, y1: c, x2: c, y2: c - RI * 0.6 }, undefined);
-    minEl.setAttribute('stroke', bright); minEl.setAttribute('stroke-width', 1.5 * s); minEl.setAttribute('stroke-linecap', 'round'); minEl.setAttribute('filter', 'url(#skinGlow)');
-    const secEl = el('line', { x1: c, y1: c, x2: c, y2: c - RI * 0.68 }, undefined);
-    secEl.setAttribute('stroke', hexRgba(accent, 0.9)); secEl.setAttribute('stroke-width', 0.8 * s); secEl.setAttribute('stroke-linecap', 'round');
+    // ── hands: built pointing up (12 o'clock); rotated live in _startClock ──
+    // ornate tapered leaf hands so hour & minute read clearly and distinctly.
+    const Lh = RI * 0.5, Lm = RI * 0.74, Ls = RI * 0.8;
+    const leaf = (L, w, tail) =>
+      `M ${c} ${c - L} Q ${c + w} ${c - L * 0.42} ${c + w * 0.55} ${c - L * 0.12} ` +
+      `L ${c + w * 0.45} ${c + tail} L ${c - w * 0.45} ${c + tail} L ${c - w * 0.55} ${c - L * 0.12} ` +
+      `Q ${c - w} ${c - L * 0.42} ${c} ${c - L} Z`;
+    const hourEl = el('path', { d: leaf(Lh, 4.4 * s, 11 * s), fill: bright, stroke: hexRgba(accent, 0.8), 'stroke-width': 0.7 * s, filter: 'url(#skinGlow)' });
+    const minEl  = el('path', { d: leaf(Lm, 3.2 * s, 13 * s), fill: bright, stroke: hexRgba(accent, 0.8), 'stroke-width': 0.7 * s, filter: 'url(#skinGlow)' });
+    // second hand: tapered red needle + counterweight tail.
+    // NOTE: drawn as a polygon, NOT a <line> — a perfectly vertical line has a
+    // zero-width bounding box, which collapses percentage-based glow filters in
+    // Chrome and makes the arm invisible (only the dot survived).
+    const secEl = el('g', {});
+    secEl.appendChild(el('polygon', { points: `${c - 0.7 * s},${c + 13 * s} ${c - 1.2 * s},${c} ${c},${c - Ls} ${c + 1.2 * s},${c} ${c + 0.7 * s},${c + 13 * s}`, fill: '#ff5a4d', filter: 'url(#skinGlow)' }));
+    secEl.appendChild(el('circle', { cx: c, cy: c + 13 * s, r: 2 * s, fill: '#ff5a4d' }));
     svg.appendChild(hourEl); svg.appendChild(minEl); svg.appendChild(secEl);
-    svg.appendChild(el('circle', { cx: c, cy: c, r: 2.2 * s, fill: bright, filter: 'url(#skinGlow)' }));
+    // hub
+    svg.appendChild(el('circle', { cx: c, cy: c, r: 3.6 * s, fill: bright, stroke: hexRgba(accent, 0.8), 'stroke-width': 0.8 * s, filter: 'url(#skinGlow)' }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: 1.5 * s, fill: '#ff5a4d' }));
     this._clockHands = { hourEl, minEl, secEl };
   }
 
@@ -1163,14 +1244,28 @@ class RadialDialHUD {
   _skin_dclock(svg, el) {
     const { c, RO, RI, s } = this.dim;
     const { accent, bright } = this._color;
-    svg.appendChild(el('circle', { cx: c, cy: c, r: RO, fill: 'none', stroke: hexRgba(bright, 0.6), 'stroke-width': 1.4 * s, filter: 'url(#skinGlow)' }));
-    // faint dark face so the LCD text reads over any page
-    svg.appendChild(el('circle', { cx: c, cy: c, r: RI, fill: 'rgba(8,7,14,0.4)', stroke: hexRgba(accent, 0.5), 'stroke-width': 1 * s }));
-    for (let i = 0; i < 40; i++) {
-      const a = (i * 9) * Math.PI / 180;
-      const r0 = RO + 2 * s, r1 = RO + 5 * s;
-      svg.appendChild(el('line', { x1: c + r0 * Math.cos(a), y1: c + r0 * Math.sin(a), x2: c + r1 * Math.cos(a), y2: c + r1 * Math.sin(a), stroke: hexRgba(accent, 0.35), 'stroke-width': 0.6 * s }));
+    // cyan tech aura + solid double bezel
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 12 * s, fill: 'url(#skAura)' }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 1 * s, fill: 'none', stroke: hexRgba(accent, 0.45), 'stroke-width': 4 * s, filter: 'url(#skinGlowStrong)' }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO, fill: 'none', stroke: hexRgba(bright, 0.9), 'stroke-width': 2 * s, filter: 'url(#skinGlow)' }));
+    // segmented outer tick ring (mechanical) — long/short alternating
+    for (let i = 0; i < 48; i++) {
+      const a = (i * 7.5) * Math.PI / 180, big = i % 4 === 0;
+      const r0 = RO + 2 * s, r1 = RO + (big ? 7 : 4) * s;
+      svg.appendChild(el('line', { x1: c + r0 * Math.cos(a), y1: c + r0 * Math.sin(a), x2: c + r1 * Math.cos(a), y2: c + r1 * Math.sin(a), stroke: hexRgba(big ? bright : accent, big ? 0.7 : 0.35), 'stroke-width': (big ? 1 : 0.6) * s }));
     }
+    // circuit-trace arcs inside the band (adds the "tech" detail)
+    const arc = (rr, a0, a1) => { const p = (a) => `${c + rr * Math.cos(a * Math.PI / 180)} ${c + rr * Math.sin(a * Math.PI / 180)}`; return `M ${p(a0)} A ${rr} ${rr} 0 0 1 ${p(a1)}`; };
+    svg.appendChild(el('path', { d: arc(RO - 6 * s, -140, -40), fill: 'none', stroke: hexRgba(accent, 0.5), 'stroke-width': 0.8 * s, 'stroke-dasharray': '1 3' }));
+    svg.appendChild(el('path', { d: arc(RO - 6 * s, 40, 140), fill: 'none', stroke: hexRgba(accent, 0.5), 'stroke-width': 0.8 * s, 'stroke-dasharray': '1 3' }));
+    // solid glassy LCD face
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RI + 2 * s, fill: 'rgba(4,12,20,0.9)', stroke: hexRgba(accent, 0.7), 'stroke-width': 1.4 * s }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RI - 1 * s, fill: 'none', stroke: hexRgba(bright, 0.3), 'stroke-width': 0.6 * s }));
+    // corner brackets around the readout
+    [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx, sy]) => {
+      const bx = c + sx * RI * 0.62, by = c + sy * RI * 0.42, L = 4 * s;
+      svg.appendChild(el('path', { d: `M ${bx + sx*L} ${by} L ${bx} ${by} L ${bx} ${by + sy*L}`, fill: 'none', stroke: hexRgba(accent, 0.7), 'stroke-width': 0.9 * s, 'stroke-linecap': 'round' }));
+    });
     // digital readout is appended as an HTML overlay in spawn() via _buildClockOverlay()
     this._needsDigitalOverlay = true;
   }
@@ -1189,40 +1284,92 @@ class RadialDialHUD {
     };
   }
 
-  // ── VII. Chrono Core — original energy-lens design (NOT a trademarked device) ──
+  // ── VII. Chrono Core — plated energy dial with a green hourglass core ──────
+  //     (generic geometric emblem + green tech ring; not branded in the UI.)
   _skin_chrono(svg, el) {
     const { c, RO, RI, s } = this.dim;
     const { accent, bright } = this._color;
-    svg.appendChild(el('circle', { cx: c, cy: c, r: RO, fill: 'none', stroke: hexRgba(bright, 0.6), 'stroke-width': 1.4 * s, filter: 'url(#skinGlow)' }));
+    const p = (r, a) => `${c + r * Math.cos(a)} ${c + r * Math.sin(a)}`;
+    // Omnitrix palette — solid, saturated greens + metal + black
+    const gLite = '#3ee06a', gMid = '#1f9c44', gDark = '#0b3d1e', metal = '#c6d2da', black = '#05120b';
+    // green energy aura
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 14 * s, fill: 'url(#skAura)' }));
+    // ── outer casing: chunky bright-green plates (the device shell) ───────────
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 2 * s, fill: 'none', stroke: gDark, 'stroke-width': 8 * s }));
     for (let i = 0; i < 8; i++) {
-      const a = (-67.5 + i * 45) * Math.PI / 180;
-      const r0 = RO + 2 * s, r1 = RO + 8 * s;
-      const x0 = c + r0 * Math.cos(a), y0 = c + r0 * Math.sin(a), x1 = c + r1 * Math.cos(a), y1 = c + r1 * Math.sin(a);
-      svg.appendChild(el('line', { x1: x0, y1: y0, x2: x1, y2: y1, stroke: hexRgba(accent, 0.5), 'stroke-width': 1 * s }));
-      svg.appendChild(el('circle', { cx: x1, cy: y1, r: 1.3 * s, fill: hexRgba(accent, 0.7) }));
+      const a0 = (-90 + i * 45 - 21) * Math.PI / 180, a1 = (-90 + i * 45 + 21) * Math.PI / 180;
+      const ro = RO + 6 * s, ri = RO - 3 * s;
+      svg.appendChild(el('path', { d: `M ${p(ro, a0)} A ${ro} ${ro} 0 0 1 ${p(ro, a1)} L ${p(ri, a1)} A ${ri} ${ri} 0 0 0 ${p(ri, a0)} Z`, fill: gMid, stroke: black, 'stroke-width': 1.4 * s, filter: 'url(#skinGlow)' }));
+      // bright green highlight sliver on each plate
+      const b0 = (-90 + i * 45 - 21) * Math.PI / 180, b1 = (-90 + i * 45 + 21) * Math.PI / 180, rb = RO + 4 * s;
+      svg.appendChild(el('path', { d: `M ${p(rb, b0)} A ${rb} ${rb} 0 0 1 ${p(rb, b1)}`, fill: 'none', stroke: gLite, 'stroke-width': 1.4 * s, 'stroke-linecap': 'round' }));
     }
-    svg.appendChild(el('circle', { cx: c, cy: c, r: RI, fill: 'none', stroke: hexRgba(accent, 0.35), 'stroke-width': 0.8 * s, 'stroke-dasharray': '3 3' }));
-    // vertical energy-lens core (deliberately NOT a two-triangle hourglass silhouette)
-    const Re = RI * 0.62;
-    const lensPath = `M ${c} ${c - Re} C ${c + Re * 0.85} ${c - Re * 0.3}, ${c + Re * 0.85} ${c + Re * 0.3}, ${c} ${c + Re}
-                       C ${c - Re * 0.85} ${c + Re * 0.3}, ${c - Re * 0.85} ${c - Re * 0.3}, ${c} ${c - Re} Z`;
-    svg.appendChild(el('path', { d: lensPath, fill: hexRgba(accent, 0.55), stroke: bright, 'stroke-width': 1 * s, filter: 'url(#skinGlowStrong)' }));
-    svg.appendChild(el('circle', { cx: c, cy: c, r: 2.6 * s, fill: bright, filter: 'url(#skinGlow)' }));
+    // four metallic "release button" pins on the diagonals
+    for (let i = 0; i < 4; i++) {
+      const a = (-45 + i * 90) * Math.PI / 180, nx = c + RO * Math.cos(a), ny = c + RO * Math.sin(a);
+      svg.appendChild(el('circle', { cx: nx, cy: ny, r: 4 * s, fill: metal, stroke: black, 'stroke-width': 1.2 * s }));
+      svg.appendChild(el('circle', { cx: nx, cy: ny, r: 1.6 * s, fill: gLite, filter: 'url(#skinGlow)' }));
+    }
+    // ── faceplate that FILLS the inner circle: metal bezel → black lens ───────
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RI, fill: metal, stroke: black, 'stroke-width': 1.4 * s }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RI - 3 * s, fill: metal, stroke: '#8b98a2', 'stroke-width': 0.8 * s }));
+    const faceR = RI - 5 * s;
+    svg.appendChild(el('circle', { cx: c, cy: c, r: faceR, fill: black }));
+    // green energy glow filling the lens
+    svg.appendChild(el('circle', { cx: c, cy: c, r: faceR, fill: 'url(#skCore)' }));
+    // ── the Omnitrix hourglass: green fills the full top & bottom of the lens ─
+    // Each half's base is an ARC of the lens circle (not a flat chord), so the
+    // green reaches the rim with zero gap and never crosses into the slot band;
+    // the black lens shows only as the two curved side pockets.
+    const th = 52 * Math.PI / 180;                       // half-spread of each cone
+    const hx = faceR * Math.sin(th), hy = faceR * Math.cos(th);
+    const hgTop = `M ${c - hx} ${c - hy} A ${faceR} ${faceR} 0 0 1 ${c + hx} ${c - hy} L ${c} ${c} Z`;
+    const hgBot = `M ${c + hx} ${c + hy} A ${faceR} ${faceR} 0 0 1 ${c - hx} ${c + hy} L ${c} ${c} Z`;
+    svg.appendChild(el('path', { d: hgTop, fill: gLite, filter: 'url(#skinGlow)' }));
+    svg.appendChild(el('path', { d: hgBot, fill: gLite, filter: 'url(#skinGlow)' }));
+    // crisp black X-edge separating green from the black side pockets
+    svg.appendChild(el('path', { d: hgTop, fill: 'none', stroke: black, 'stroke-width': 1.4 * s, 'stroke-linejoin': 'round' }));
+    svg.appendChild(el('path', { d: hgBot, fill: 'none', stroke: black, 'stroke-width': 1.4 * s, 'stroke-linejoin': 'round' }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: 2.2 * s, fill: bright, filter: 'url(#skinGlow)' }));
   }
 
   // ── VIII. Ice Wraith — jagged crystal-shard ring, 6-arm snowflake core ────
   _skin_ice(svg, el) {
     const { c, RO, RI, s } = this.dim;
     const { accent, bright } = this._color;
-    svg.appendChild(el('circle', { cx: c, cy: c, r: RO, fill: 'none', stroke: hexRgba(bright, 0.5), 'stroke-width': 1.2 * s, filter: 'url(#skinGlow)' }));
-    // outward crystal shards (alternating long/short) — the ice ring
+    // frosty aura
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 16 * s, fill: 'url(#skAura)' }));
+    // frosted double rim of the ring band itself
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO, fill: 'none', stroke: hexRgba(bright, 0.7), 'stroke-width': 1.6 * s, filter: 'url(#skinGlowStrong)' }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RI, fill: 'none', stroke: hexRgba(bright, 0.5), 'stroke-width': 1.2 * s, filter: 'url(#skinGlow)' }));
+    // ── frozen-glass faceting across the ring band (makes the DIAL look icy) ──
+    for (let i = 0; i < 16; i++) {
+      const a0 = (i * 22.5) * Math.PI / 180, a1 = (i * 22.5 + 11) * Math.PI / 180;
+      // a thin ice facet: from inner edge at a0 up to outer edge at a1
+      svg.appendChild(el('polygon', {
+        points: `${c + RI * Math.cos(a0)},${c + RI * Math.sin(a0)} ${c + RO * Math.cos(a1)},${c + RO * Math.sin(a1)} ${c + RO * Math.cos(a0)},${c + RO * Math.sin(a0)}`,
+        fill: hexRgba(bright, 0.10 + (i % 2) * 0.06), stroke: hexRgba(bright, 0.22), 'stroke-width': 0.4 * s }));
+    }
+    // hoar-frost feather crystals growing inward from the outer rim
+    for (let i = 0; i < 24; i++) {
+      const a = (i * 15) * Math.PI / 180, r0 = RO - 1 * s, r1 = RO - (5 + (i % 3) * 4) * s;
+      svg.appendChild(el('line', { x1: c + r0 * Math.cos(a), y1: c + r0 * Math.sin(a), x2: c + r1 * Math.cos(a), y2: c + r1 * Math.sin(a), stroke: hexRgba(bright, 0.35), 'stroke-width': 0.5 * s, 'stroke-linecap': 'round' }));
+    }
+    const shard = (a, base, len, w, fill, stroke) => {
+      const bx = c + base * Math.cos(a), by = c + base * Math.sin(a);
+      const tx = c + (base + len) * Math.cos(a), ty = c + (base + len) * Math.sin(a);
+      const perp = a + Math.PI / 2;
+      svg.appendChild(el('polygon', { points: `${bx + w * Math.cos(perp)},${by + w * Math.sin(perp)} ${tx},${ty} ${bx - w * Math.cos(perp)},${by - w * Math.sin(perp)}`, fill, stroke, 'stroke-width': 0.4 * s }));
+    };
+    // outward crystal shards (alternating long/short) — spiky ice crown
     for (let i = 0; i < 20; i++) {
       const a = (i * 18) * Math.PI / 180;
-      const bx = c + RO * Math.cos(a), by = c + RO * Math.sin(a);
-      const len = (i % 2 === 0 ? 12 : 7) * s;
-      const tx = c + (RO + len) * Math.cos(a), ty = c + (RO + len) * Math.sin(a);
-      const perp = a + Math.PI / 2, w = (i % 2 === 0 ? 3 : 2) * s;
-      svg.appendChild(el('polygon', { points: `${bx + w * Math.cos(perp)},${by + w * Math.sin(perp)} ${tx},${ty} ${bx - w * Math.cos(perp)},${by - w * Math.sin(perp)}`, fill: hexRgba(bright, 0.5), stroke: hexRgba(accent, 0.6), 'stroke-width': 0.4 * s }));
+      shard(a, RO, (i % 2 === 0 ? 13 : 7) * s, (i % 2 === 0 ? 3 : 2) * s, hexRgba(bright, 0.6), hexRgba(accent, 0.75));
+    }
+    // inward shards making the ring's inner edge jagged/crystalline
+    for (let i = 0; i < 16; i++) {
+      const a = (i * 22.5 + 6) * Math.PI / 180;
+      shard(a, RI, (5 + (i % 2) * 4) * s, 2 * s, hexRgba(bright, 0.45), hexRgba(accent, 0.5));
     }
     // detailed snowflake in the centre hole
     const Rf = RI * 0.7;
@@ -1246,28 +1393,81 @@ class RadialDialHUD {
   _skin_dragon(svg, el) {
     const { c, RO, RI, s } = this.dim;
     const { accent, bright } = this._color;
-    // wavy flame tongues licking outward
-    for (let i = 0; i < 18; i++) {
-      const a = (i * 20) * Math.PI / 180;
+    // fiery aura
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO + 20 * s, fill: 'url(#skAura)' }));
+    // dragon fire-breath: dense layered flame tongues (orange body + yellow core)
+    const flame = (a, len, w, fill, op) => {
       const bx = c + RO * Math.cos(a), by = c + RO * Math.sin(a);
-      const len = (9 + prand(i) * 8) * s;
-      const bend = a + (prand(i + 10) - 0.5) * 0.7;
+      const bend = a + (prand(Math.round(a * 30) + 10) - 0.5) * 0.7;
       const mx = c + (RO + len * 0.55) * Math.cos(bend), my = c + (RO + len * 0.55) * Math.sin(bend);
-      const ta = a + (prand(i + 20) - 0.5) * 0.3;
+      const ta = a + (prand(Math.round(a * 30) + 20) - 0.5) * 0.3;
       const tx = c + (RO + len) * Math.cos(ta), ty = c + (RO + len) * Math.sin(ta);
-      const perp = a + Math.PI / 2, w = 2 * s;
+      const perp = a + Math.PI / 2;
       const b1x = bx + w * Math.cos(perp), b1y = by + w * Math.sin(perp);
       const b2x = bx - w * Math.cos(perp), b2y = by - w * Math.sin(perp);
-      svg.appendChild(el('path', { d: `M${b1x} ${b1y} Q ${mx} ${my} ${tx} ${ty} Q ${mx} ${my} ${b2x} ${b2y} Z`, fill: hexRgba(i % 2 ? accent : bright, 0.6), filter: 'url(#skinGlow)' }));
+      svg.appendChild(el('path', { d: `M${b1x} ${b1y} Q ${mx} ${my} ${tx} ${ty} Q ${mx} ${my} ${b2x} ${b2y} Z`, fill: hexRgba(fill, op), filter: 'url(#skinGlow)' }));
+    };
+    for (let i = 0; i < 30; i++) {                 // outer orange flame body (full coverage)
+      const a = (i * 12) * Math.PI / 180;
+      flame(a, (10 + prand(i) * 12) * s, 2.6 * s, accent, 0.55);
     }
-    // scale ring
-    svg.appendChild(el('circle', { cx: c, cy: c, r: RO, fill: 'none', stroke: hexRgba(accent, 0.6), 'stroke-width': 2 * s, filter: 'url(#skinGlow)' }));
-    svg.appendChild(el('circle', { cx: c, cy: c, r: RO - 3 * s, fill: 'none', stroke: hexRgba(accent, 0.3), 'stroke-width': 1 * s, 'stroke-dasharray': '3 3' }));
-    // geometric dragon-head sigil in centre hole (original — not a copy of any artwork)
-    const g = el('g', { transform: `translate(${c} ${c}) scale(${s * 1.15})` });
-    g.appendChild(el('path', { d: 'M-11 5 L-5 -9 L-1 -3 L0 -9 L1 -3 L5 -9 L11 5 L4 3 L0 8 L-4 3 Z', fill: hexRgba(accent, 0.7), stroke: bright, 'stroke-width': 0.7, filter: 'url(#skinGlowStrong)' }));
-    g.appendChild(el('circle', { cx: -4, cy: -1, r: 1.1, fill: '#fff2d0' }));
-    g.appendChild(el('circle', { cx: 4, cy: -1, r: 1.1, fill: '#fff2d0' }));
+    for (let i = 0; i < 30; i++) {                 // inner bright-yellow flame cores
+      const a = (i * 12 + 6) * Math.PI / 180;
+      flame(a, (6 + prand(i + 50) * 8) * s, 1.5 * s, bright, 0.7);
+    }
+    // dragon-hide ring: dark band backing + overlapping scales across the WHOLE band
+    svg.appendChild(el('circle', { cx: c, cy: c, r: (RO + RI) / 2, fill: 'none', stroke: 'rgba(16,6,3,0.88)', 'stroke-width': RO - RI + 2 * s }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RO, fill: 'none', stroke: hexRgba(accent, 0.75), 'stroke-width': 1.6 * s, filter: 'url(#skinGlow)' }));
+    svg.appendChild(el('circle', { cx: c, cy: c, r: RI, fill: 'none', stroke: hexRgba(accent, 0.5), 'stroke-width': 1 * s }));
+    for (let row = 0; row < 7; row++) {
+      const rr = RI + (4 + row * 4.6) * s;
+      if (rr > RO - 1 * s) break;
+      const n = 34, off = (row % 2) * Math.PI / n;   // alternate rows interlock
+      for (let i = 0; i < n; i++) {
+        const a = i * (2 * Math.PI / n) + off;
+        const bx = c + (rr + 2.2 * s) * Math.cos(a), by = c + (rr + 2.2 * s) * Math.sin(a);
+        const sw = (Math.PI / n) * 0.92;
+        const x0 = c + rr * Math.cos(a - sw), y0 = c + rr * Math.sin(a - sw);
+        const x1 = c + rr * Math.cos(a + sw), y1 = c + rr * Math.sin(a + sw);
+        svg.appendChild(el('path', { d: `M${x0} ${y0} Q ${bx} ${by} ${x1} ${y1}`, fill: 'none', stroke: hexRgba(accent, row % 2 ? 0.45 : 0.6), 'stroke-width': 0.8 * s }));
+      }
+    }
+    // ── proper front-facing dragon head filling the centre hole ──────────────
+    // (RI already includes the dial scale, so RI/30 sizes the ±28-unit art
+    //  correctly at every dial size — the old s*(RI/86) double-counted s.)
+    const g = el('g', { transform: `translate(${c} ${c}) scale(${RI / 30})` });
+    const dark = '#2e0a03', hide = hexRgba(accent, 0.85);
+    // long swept-back main horns
+    g.appendChild(el('path', { d: 'M-6 -12 C -11 -16 -15 -21 -16 -28 C -12 -21 -8 -16 -3 -13 Z', fill: dark, stroke: hexRgba(accent, 0.9), 'stroke-width': 0.8 }));
+    g.appendChild(el('path', { d: 'M6 -12 C 11 -16 15 -21 16 -28 C 12 -21 8 -16 3 -13 Z', fill: dark, stroke: hexRgba(accent, 0.9), 'stroke-width': 0.8 }));
+    // secondary horns
+    g.appendChild(el('path', { d: 'M-9 -9 C -14 -10 -17 -13 -19 -17 C -15 -12 -11 -10 -7 -7 Z', fill: dark, stroke: hexRgba(accent, 0.7), 'stroke-width': 0.6 }));
+    g.appendChild(el('path', { d: 'M9 -9 C 14 -10 17 -13 19 -17 C 15 -12 11 -10 7 -7 Z', fill: dark, stroke: hexRgba(accent, 0.7), 'stroke-width': 0.6 }));
+    // cheek spikes
+    g.appendChild(el('path', { d: 'M-10 -2 L-17 0 L-10 3 Z', fill: dark, stroke: hexRgba(accent, 0.7), 'stroke-width': 0.6 }));
+    g.appendChild(el('path', { d: 'M10 -2 L17 0 L10 3 Z', fill: dark, stroke: hexRgba(accent, 0.7), 'stroke-width': 0.6 }));
+    // skull → cheekbones → tapering snout
+    g.appendChild(el('path', { d: 'M0 -14 C -5 -14 -9 -11 -10 -6 C -11 -2 -10 2 -7 5 C -5 7 -4 9 -3 12 L 0 16 L 3 12 C 4 9 5 7 7 5 C 10 2 11 -2 10 -6 C 9 -11 5 -14 0 -14 Z', fill: hide, stroke: bright, 'stroke-width': 0.8, filter: 'url(#skinGlowStrong)' }));
+    // forehead scale ridges
+    g.appendChild(el('path', { d: 'M-4 -10 Q 0 -8 4 -10', fill: 'none', stroke: dark, 'stroke-width': 0.5 }));
+    g.appendChild(el('path', { d: 'M-5 -7 Q 0 -5 5 -7', fill: 'none', stroke: dark, 'stroke-width': 0.5 }));
+    g.appendChild(el('path', { d: 'M-6 -4 Q 0 -2 6 -4', fill: 'none', stroke: dark, 'stroke-width': 0.5 }));
+    // heavy brow ridges shading the eyes
+    g.appendChild(el('path', { d: 'M-9 -6 L-3 -4 L-9 -2 Z', fill: dark }));
+    g.appendChild(el('path', { d: 'M9 -6 L3 -4 L9 -2 Z', fill: dark }));
+    // fierce glowing slit eyes with dark pupils
+    g.appendChild(el('path', { d: 'M-8 -4 L-3 -2.5 L-7.5 -0.5 Z', fill: '#ffe08a', filter: 'url(#skinGlow)' }));
+    g.appendChild(el('path', { d: 'M8 -4 L3 -2.5 L7.5 -0.5 Z', fill: '#ffe08a', filter: 'url(#skinGlow)' }));
+    g.appendChild(el('circle', { cx: -5.4, cy: -2.4, r: 0.65, fill: dark }));
+    g.appendChild(el('circle', { cx: 5.4, cy: -2.4, r: 0.65, fill: dark }));
+    // flared nostrils on the snout
+    g.appendChild(el('ellipse', { cx: -1.7, cy: 7, rx: 0.9, ry: 1.3, fill: '#160500' }));
+    g.appendChild(el('ellipse', { cx: 1.7, cy: 7, rx: 0.9, ry: 1.3, fill: '#160500' }));
+    // snarling open jaw with bared fangs
+    g.appendChild(el('path', { d: 'M-5 10 Q 0 13.5 5 10 L 5 11 Q 0 15 -5 11 Z', fill: dark, stroke: hexRgba(bright, 0.5), 'stroke-width': 0.4 }));
+    g.appendChild(el('path', { d: 'M-3.8 10.4 L-3 13.4 L-2.2 10.8 Z', fill: '#ffe9c9' }));
+    g.appendChild(el('path', { d: 'M-0.8 11.2 L0 14.4 L0.8 11.2 Z', fill: '#ffe9c9' }));
+    g.appendChild(el('path', { d: 'M2.2 10.8 L3 13.4 L3.8 10.4 Z', fill: '#ffe9c9' }));
     svg.appendChild(g);
   }
 
@@ -1396,6 +1596,7 @@ class MouseController {
       theme:     Store.dialTheme(),      // only meaningful for the 'radial' skin
       design:    this._activeDesignId,
       timezone:  ds.timezone,
+      numerals:  ds.numerals,
     });
     this._ticker.tick(900, 0.10, 0.05);    // soft "open" blip
     this._ticker.loadCustom(Store.soundCustomUrl());   // pre-decode, fire-and-forget

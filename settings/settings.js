@@ -34,7 +34,7 @@ const KEYS = {
   activeDesign:   'moussy_active_design',
   designSettings: 'moussy_design_settings',
 };
-const DEF = { size: 0.82, opacity: 0.55, delay: 500, color: 'violet', theme: 'classic', soundId: 'classic' };
+const DEF = { size: 0.82, opacity: 0.55, delay: 100, color: 'violet', theme: 'classic', soundId: 'classic' };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const MAX_CUSTOM_SOUND_SEC = 2;
 
@@ -148,14 +148,17 @@ function hostOf(url) { try { return new URL(url).hostname.replace(/^www\./, '');
 
 /** Per-design size/opacity/delay/timezone — 'radial' uses the legacy flat state fields. */
 function getTabSettings(id) {
-  if (id === 'radial') return { size: state.size, opacity: state.opacity, delay: state.delay, timezone: '' };
-  if (!state.otherDesigns[id]) state.otherDesigns[id] = { size: DEF.size, opacity: DEF.opacity, delay: DEF.delay, timezone: DEFAULT_TIMEZONE };
-  return state.otherDesigns[id];
+  if (id === 'radial') return { size: state.size, opacity: state.opacity, delay: state.delay, timezone: '', numerals: 'roman' };
+  if (!state.otherDesigns[id]) state.otherDesigns[id] = { size: DEF.size, opacity: DEF.opacity, delay: DEF.delay, timezone: DEFAULT_TIMEZONE, numerals: 'roman' };
+  const t = state.otherDesigns[id];
+  if (t.numerals !== 'english') t.numerals = 'roman';
+  return t;
 }
 function setTabSize(id, v)    { if (id === 'radial') state.size = v;    else getTabSettings(id).size = v; }
 function setTabOpacity(id, v) { if (id === 'radial') state.opacity = v; else getTabSettings(id).opacity = v; }
 function setTabDelay(id, v)   { if (id === 'radial') state.delay = v;   else getTabSettings(id).delay = v; }
 function setTabTimezone(id, v){ if (id !== 'radial') getTabSettings(id).timezone = v; }
+function setTabNumerals(id, v){ if (id !== 'radial') getTabSettings(id).numerals = v === 'english' ? 'english' : 'roman'; }
 
 // ── wedge model (clockwise from North) — SHARED slot bindings, used by every design ──
 function wedgeModel() {
@@ -351,81 +354,138 @@ function renderRadialPreview(stage) {
 // ── Skin previews (designs II-IX) — mirror content.js's _skin_* builders ───────
 const SKIN_PREVIEW_BUILDERS = {
   ghost(c, RO, RI, s, rad, accent, bright) {
-    // multi-layer glowing wispy ring
-    let p = `<circle cx="${c}" cy="${c}" r="${RO+2*s}" fill="none" stroke="${hexRgba(bright,0.28)}" stroke-width="${7*s}" filter="url(#skGlowStrong)"/>`;
-    p += `<circle cx="${c}" cy="${c}" r="${RO}" fill="none" stroke="${hexRgba(bright,0.6)}" stroke-width="${2*s}" filter="url(#skGlow)"/>`;
-    p += `<circle cx="${c}" cy="${c}" r="${RO-3*s}" fill="none" stroke="${hexRgba(accent,0.35)}" stroke-width="${1*s}" stroke-dasharray="1 6"/>`;
-    // ghost silhouettes straddling the ring edge
-    [22, 96, 168, 262, 322].forEach((deg, i) => {
-      const a = rad(deg), gr = RO + (i % 2 ? 4 : 9) * s, x = c + gr * Math.cos(a), y = c + gr * Math.sin(a);
-      p += `<g transform="translate(${x} ${y}) scale(${s*(0.5+(i%2)*0.14)})" opacity="0.92">
-        <path d="M-9 5 C-9 -9 9 -9 9 5 L9 11 L5 7 L1 11 L-3 7 L-7 11 Z" fill="${hexRgba(bright,0.6)}" filter="url(#skGlow)"/>
-        <circle cx="-3" cy="-1" r="1.2" fill="#1a0f2e"/><circle cx="3" cy="-1" r="1.2" fill="#1a0f2e"/>
+    // soft ethereal halo
+    let p = `<circle cx="${c}" cy="${c}" r="${RO+16*s}" fill="url(#skAura)"/>`;
+    // layered plasma ring
+    p += `<circle cx="${c}" cy="${c}" r="${RO}" fill="none" stroke="${hexRgba(bright,0.16)}" stroke-width="${12*s}" filter="url(#skGlowXL)"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RO+1*s}" fill="none" stroke="${hexRgba(accent,0.5)}" stroke-width="${5*s}" filter="url(#skGlowStrong)"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RO}" fill="none" stroke="${hexRgba(bright,0.85)}" stroke-width="${1.8*s}" filter="url(#skGlow)"/>`;
+    // long smoky wisps curling off the ring
+    for (let i = 0; i < 14; i++) {
+      const a = rad(i*(360/14) + prand(i)*22), rr = RO + (prand(i+5)-0.4)*5*s;
+      const x0 = c+rr*Math.cos(a), y0 = c+rr*Math.sin(a), swirl = (prand(i+7)-0.5)*1.2;
+      const flr = RO + (6+prand(i+9)*14)*s, mx = c+flr*Math.cos(a+swirl*0.4), my = c+flr*Math.sin(a+swirl*0.4);
+      const flr2 = RO + (10+prand(i+11)*16)*s, ex = c+flr2*Math.cos(a+swirl), ey = c+flr2*Math.sin(a+swirl);
+      p += `<path d="M${x0} ${y0} Q ${mx} ${my} ${ex} ${ey}" fill="none" stroke="${hexRgba(bright,0.22+prand(i)*0.18)}" stroke-width="${(0.8+prand(i+3)*1.4)*s}" stroke-linecap="round" filter="url(#skGlowStrong)"/>`;
+    }
+    // extra turbulent smoke rings hugging the band
+    p += `<circle cx="${c}" cy="${c}" r="${RO-6*s}" fill="none" stroke="${hexRgba(bright,0.18)}" stroke-width="${3*s}" stroke-dasharray="${9*s} ${14*s}" filter="url(#skGlowStrong)"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RO+5*s}" fill="none" stroke="${hexRgba(accent,0.25)}" stroke-width="${2.2*s}" stroke-dasharray="${5*s} ${11*s}" filter="url(#skGlowStrong)"/>`;
+    // six spirits at varied depth, size and drift-tilt
+    [[26, RO+10, 0.72, 0.92, 14], [88, RO+6, 0.44, 0.6, -10], [150, RO+11, 0.82, 0.95, 8],
+     [205, RO+4, 0.5, 0.55, -16], [258, RO-1, 0.62, 0.8, 12], [318, RO+9, 0.7, 0.88, -8]].forEach(([deg, gr, sc, op, rot]) => {
+      const a = rad(deg), x = c + gr * Math.cos(a), y = c + gr * Math.sin(a);
+      p += `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s*sc})" opacity="${op}">
+        <path d="M-7 8 Q -14 12 -20 10 Q -14 14 -6 12" fill="${hexRgba(bright,0.18)}" filter="url(#skGlowStrong)"/>
+        <ellipse cx="0" cy="-1" rx="10" ry="13" fill="${hexRgba(bright,0.12)}" filter="url(#skGlowStrong)"/>
+        <path d="M-8 4 C-9 -13 9 -13 8 4 L8 10 L5.5 5 L3 13 L0.5 6 L-2 14 L-4.5 6 L-7 11 Z" fill="${hexRgba(bright,0.42)}" stroke="${hexRgba(bright,0.7)}" stroke-width="0.5" filter="url(#skGlow)"/>
+        <ellipse cx="-3" cy="-3" rx="1.6" ry="2.4" fill="#0a0616"/><ellipse cx="3" cy="-3" rx="1.6" ry="2.4" fill="#0a0616"/><ellipse cx="0" cy="2" rx="1.4" ry="2.2" fill="#0a0616"/>
       </g>`;
     });
-    // drifting mist wisps outside the ring
-    for (let i = 0; i < 12; i++) { const a = prand(i)*Math.PI*2, r = RO + (2+prand(i+40)*14)*s; p += `<circle cx="${c+r*Math.cos(a)}" cy="${c+r*Math.sin(a)}" r="${(0.6+prand(i+80))*s}" fill="${hexRgba(bright,0.4)}"/>`; }
+    // drifting soul-motes
+    for (let i = 0; i < 16; i++) { const a = prand(i)*Math.PI*2, r = RO + (2+prand(i+40)*18)*s; p += `<circle cx="${c+r*Math.cos(a)}" cy="${c+r*Math.sin(a)}" r="${(0.4+prand(i+80)*1.2)*s}" fill="${hexRgba(bright,0.4)}" filter="url(#skGlow)"/>`; }
     return p;
   },
   magic(c, RO, RI, s, rad, accent, bright) {
-    // outer concentric magic-circle rings
-    let p = `<circle cx="${c}" cy="${c}" r="${RO+12*s}" fill="none" stroke="${hexRgba(accent,0.35)}" stroke-width="${0.8*s}"/>`;
+    // mystical aura + outer concentric magic-circle rings
+    let p = `<circle cx="${c}" cy="${c}" r="${RO+18*s}" fill="url(#skAura)"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RO+12*s}" fill="none" stroke="${hexRgba(accent,0.35)}" stroke-width="${0.8*s}"/>`;
     p += `<circle cx="${c}" cy="${c}" r="${RO+7*s}" fill="none" stroke="${hexRgba(bright,0.5)}" stroke-width="${1*s}" filter="url(#skGlow)"/>`;
     p += `<circle cx="${c}" cy="${c}" r="${RO+9.5*s}" fill="none" stroke="${hexRgba(accent,0.4)}" stroke-width="${0.6*s}" stroke-dasharray="2 4"/>`;
     // geometric rune marks between the outer rings
     const runes = ['M-2 -3 L0 -3 L0 3 M0 -1 L2 1', 'M0 -3 L0 3 M-2 -1 L2 -1', 'M-2 -3 L2 3 M2 -3 L-2 3', 'M-2 -3 L2 -3 L-2 3 L2 3', 'M0 -3 L0 3 M-2 -3 L2 -3'];
     const Rr = RO + 9.5 * s;
     for (let i = 0; i < 12; i++) { const a = rad(i*30-90), x = c+Rr*Math.cos(a), y = c+Rr*Math.sin(a); p += `<path d="${runes[i%runes.length]}" transform="translate(${x} ${y}) rotate(${i*30+90}) scale(${s*0.9})" fill="none" stroke="${hexRgba(bright,0.7)}" stroke-width="0.8" stroke-linecap="round"/>`; }
-    // inner heptagram (7-point star) in the centre hole
+    // faint radiant light rays streaming inward toward the star
+    for (let i = 0; i < 24; i++) { const a = rad(i*15), r0 = RI*0.78, r1 = RI*0.95; p += `<line x1="${c+r0*Math.cos(a)}" y1="${c+r0*Math.sin(a)}" x2="${c+r1*Math.cos(a)}" y2="${c+r1*Math.sin(a)}" stroke="${hexRgba(bright, i%2?0.28:0.14)}" stroke-width="${0.6*s}"/>`; }
+    // inner heptagram (7-point star) — the enchanted sigil
     const Rh = RI * 0.72; const hp = [];
     for (let i = 0; i < 7; i++) { const a = rad(-90 + i*(360*3/7)); hp.push(`${c+Rh*Math.cos(a)},${c+Rh*Math.sin(a)}`); }
-    p += `<polygon points="${hp.join(' ')}" fill="none" stroke="${hexRgba(bright,0.7)}" stroke-width="${1*s}" filter="url(#skGlow)"/>`;
+    p += `<polygon points="${hp.join(' ')}" fill="${hexRgba(accent,0.12)}" stroke="${hexRgba(bright,0.75)}" stroke-width="${1*s}" filter="url(#skGlow)"/>`;
     p += `<circle cx="${c}" cy="${c}" r="${Rh}" fill="none" stroke="${hexRgba(accent,0.4)}" stroke-width="${0.6*s}"/>`;
     p += `<circle cx="${c}" cy="${c}" r="${Rh*0.52}" fill="none" stroke="${hexRgba(bright,0.4)}" stroke-width="${0.6*s}" stroke-dasharray="2 2"/>`;
-    // sparkle dust outside
-    for (let i = 0; i < 10; i++) { const a = prand(i)*Math.PI*2, r = RO + (2+prand(i+30)*12)*s, x = c+r*Math.cos(a), y = c+r*Math.sin(a); p += `<path d="M${x-1.5} ${y} L${x} ${y-1.5} L${x+1.5} ${y} L${x} ${y+1.5} Z" fill="${hexRgba(bright,0.6)}"/>`; }
+    // glowing arcane core
+    p += `<circle cx="${c}" cy="${c}" r="${5*s}" fill="url(#skCore)"/><circle cx="${c}" cy="${c}" r="${1.8*s}" fill="${bright}" filter="url(#skGlowStrong)"/>`;
+    // twinkling spell-sparkles (4-point stars)
+    for (let i = 0; i < 16; i++) {
+      const a = prand(i)*Math.PI*2, r = RO + (2+prand(i+30)*14)*s, x = c+r*Math.cos(a), y = c+r*Math.sin(a), rr = (1.2+prand(i+60)*2.4)*s, op = 0.45+prand(i)*0.4;
+      p += `<path d="M${x} ${y-rr} Q ${x+rr*0.16} ${y-rr*0.16} ${x+rr} ${y} Q ${x+rr*0.16} ${y+rr*0.16} ${x} ${y+rr} Q ${x-rr*0.16} ${y+rr*0.16} ${x-rr} ${y} Q ${x-rr*0.16} ${y-rr*0.16} ${x} ${y-rr} Z" fill="${hexRgba(bright,op)}" filter="url(#skGlow)"/>`;
+    }
     return p;
   },
   ninja(c, RO, RI, s, rad, accent, bright) {
     const pt = (r, a) => `${c + r * Math.cos(a)} ${c + r * Math.sin(a)}`;
-    // 8 dark stone plates with gaps
-    let p = '';
+    // faint red aura + 8 dark rocky plates with jagged outer edges
+    let p = `<circle cx="${c}" cy="${c}" r="${RO+14*s}" fill="url(#skAura)"/>`;
     for (let i = 0; i < 8; i++) {
-      const a0 = rad(-90 + i*45 - 19), a1 = rad(-90 + i*45 + 19), ro = RO+3*s, ri = RO-3*s;
-      p += `<path d="M ${pt(ro,a0)} A ${ro} ${ro} 0 0 1 ${pt(ro,a1)} L ${pt(ri,a1)} A ${ri} ${ri} 0 0 0 ${pt(ri,a0)} Z" fill="rgba(14,10,12,0.92)" stroke="${hexRgba(accent,0.5)}" stroke-width="${0.8*s}"/>`;
+      const a0 = rad(-90 + i*45 - 19), am = rad(-90 + i*45), a1 = rad(-90 + i*45 + 19);
+      const ro = RO+(2+prand(i)*4)*s, rm = RO+(5+prand(i+3)*4)*s, ri = RO-4*s;
+      p += `<path d="M ${pt(ro,a0)} L ${pt(rm,am)} L ${pt(ro,a1)} L ${pt(ri,a1)} A ${ri} ${ri} 0 0 0 ${pt(ri,a0)} Z" fill="rgba(12,9,11,0.95)" stroke="${hexRgba(accent,0.55)}" stroke-width="${0.9*s}" filter="url(#skGlow)"/>`;
+      p += `<path d="M ${pt(RO-4*s,a0)} A ${RO-4*s} ${RO-4*s} 0 0 1 ${pt(RO-4*s,a1)}" fill="none" stroke="${hexRgba(accent,0.3)}" stroke-width="${0.6*s}"/>`;
     }
     // glowing red cracks radiating between plates
-    for (let i = 0; i < 8; i++) { const a = rad(-67.5 + i*45); p += `<line x1="${c+(RO-3*s)*Math.cos(a)}" y1="${c+(RO-3*s)*Math.sin(a)}" x2="${c+(RO+7*s)*Math.cos(a)}" y2="${c+(RO+7*s)*Math.sin(a)}" stroke="${hexRgba(accent,0.75)}" stroke-width="${0.8*s}" filter="url(#skGlow)"/>`; }
-    // red shuriken in the centre hole
-    let g = `<g transform="translate(${c} ${c}) scale(${s*0.9})">`;
-    for (let i = 0; i < 4; i++) g += `<path d="M0 0 L4 -16 L9 -5 Z" fill="${hexRgba(accent,0.6)}" transform="rotate(${i*90})" filter="url(#skGlow)"/>`;
-    g += `<circle cx="0" cy="0" r="3" fill="none" stroke="${hexRgba(bright,0.7)}" stroke-width="1"/></g>`; p += g;
+    for (let i = 0; i < 8; i++) { const a = rad(-67.5 + i*45); p += `<line x1="${c+(RO-6*s)*Math.cos(a)}" y1="${c+(RO-6*s)*Math.sin(a)}" x2="${c+(RO+8*s)*Math.cos(a)}" y2="${c+(RO+8*s)*Math.sin(a)}" stroke="${hexRgba(accent,0.8)}" stroke-width="${0.9*s}" filter="url(#skGlowStrong)"/>`; }
+    // proper 4-point throwing star with a bladed silhouette + hole
+    const shR = RI*0.62, shr = shR*0.34, star = [];
+    for (let i = 0; i < 8; i++) { const rr = i%2===0?shR:shr, a = rad(-90+i*45); star.push(`${c+rr*Math.cos(a)},${c+rr*Math.sin(a)}`); }
+    let g = `<polygon points="${star.join(' ')}" fill="${hexRgba(accent,0.85)}" stroke="${bright}" stroke-width="${0.8*s}" stroke-linejoin="miter" filter="url(#skGlowStrong)"/>`;
+    for (let i = 0; i < 4; i++) { const a = rad(-90+i*90); g += `<line x1="${c}" y1="${c}" x2="${c+shR*Math.cos(a)}" y2="${c+shR*Math.sin(a)}" stroke="${hexRgba(bright,0.5)}" stroke-width="${0.6*s}"/>`; }
+    g += `<circle cx="${c}" cy="${c}" r="${shr*0.7}" fill="rgba(10,7,9,0.95)" stroke="${hexRgba(bright,0.8)}" stroke-width="${1*s}"/>`; p += g;
     p += `<text x="${c}" y="${c-RO-10*s}" fill="${hexRgba(accent,0.9)}" font-size="${13*s}" font-family="'Segoe UI',sans-serif" font-weight="700" text-anchor="middle" filter="url(#skGlow)">忍</text>`;
     p += `<text x="${c}" y="${c+RO+18*s}" fill="${hexRgba(accent,0.9)}" font-size="${13*s}" font-family="'Segoe UI',sans-serif" font-weight="700" text-anchor="middle" filter="url(#skGlow)">影</text>`;
     return p;
   },
   chrono(c, RO, RI, s, rad, accent, bright) {
-    let p = `<circle cx="${c}" cy="${c}" r="${RO}" fill="none" stroke="${hexRgba(bright,0.6)}" stroke-width="${1.4*s}" filter="url(#skGlow)"/>`;
+    const pt = (r, a) => `${c + r * Math.cos(a)} ${c + r * Math.sin(a)}`;
+    const gLite = '#3ee06a', gMid = '#1f9c44', gDark = '#0b3d1e', metal = '#c6d2da', black = '#05120b';
+    let p = `<circle cx="${c}" cy="${c}" r="${RO+14*s}" fill="url(#skAura)"/>`;
+    // outer casing: chunky bright-green plates (the device shell)
+    p += `<circle cx="${c}" cy="${c}" r="${RO+2*s}" fill="none" stroke="${gDark}" stroke-width="${8*s}"/>`;
     for (let i = 0; i < 8; i++) {
-      const a = rad(-67.5 + i*45), r0 = RO+2*s, r1 = RO+8*s;
-      const x0 = c+r0*Math.cos(a), y0 = c+r0*Math.sin(a), x1 = c+r1*Math.cos(a), y1 = c+r1*Math.sin(a);
-      p += `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${hexRgba(accent,0.5)}" stroke-width="${1*s}"/><circle cx="${x1}" cy="${y1}" r="${1.3*s}" fill="${hexRgba(accent,0.7)}"/>`;
+      const a0 = rad(-90 + i*45 - 21), a1 = rad(-90 + i*45 + 21), ro = RO+6*s, ri = RO-3*s, rb = RO+4*s;
+      p += `<path d="M ${pt(ro,a0)} A ${ro} ${ro} 0 0 1 ${pt(ro,a1)} L ${pt(ri,a1)} A ${ri} ${ri} 0 0 0 ${pt(ri,a0)} Z" fill="${gMid}" stroke="${black}" stroke-width="${1.4*s}" filter="url(#skGlow)"/>`;
+      p += `<path d="M ${pt(rb,a0)} A ${rb} ${rb} 0 0 1 ${pt(rb,a1)}" fill="none" stroke="${gLite}" stroke-width="${1.4*s}" stroke-linecap="round"/>`;
     }
-    p += `<circle cx="${c}" cy="${c}" r="${RI}" fill="none" stroke="${hexRgba(accent,0.35)}" stroke-width="${0.8*s}" stroke-dasharray="3 3"/>`;
-    const Re = RI * 0.62;
-    p += `<path d="M ${c} ${c-Re} C ${c+Re*0.85} ${c-Re*0.3}, ${c+Re*0.85} ${c+Re*0.3}, ${c} ${c+Re} C ${c-Re*0.85} ${c+Re*0.3}, ${c-Re*0.85} ${c-Re*0.3}, ${c} ${c-Re} Z" fill="${hexRgba(accent,0.55)}" stroke="${bright}" stroke-width="${1*s}" filter="url(#skGlowStrong)"/>`;
-    p += `<circle cx="${c}" cy="${c}" r="${2.6*s}" fill="${bright}" filter="url(#skGlow)"/>`;
+    // four metallic release-button pins on the diagonals
+    for (let i = 0; i < 4; i++) {
+      const a = rad(-45 + i*90), nx = c+RO*Math.cos(a), ny = c+RO*Math.sin(a);
+      p += `<circle cx="${nx}" cy="${ny}" r="${4*s}" fill="${metal}" stroke="${black}" stroke-width="${1.2*s}"/><circle cx="${nx}" cy="${ny}" r="${1.6*s}" fill="${gLite}" filter="url(#skGlow)"/>`;
+    }
+    // faceplate FILLS the inner circle: metal bezel → black lens → green glow
+    p += `<circle cx="${c}" cy="${c}" r="${RI}" fill="${metal}" stroke="${black}" stroke-width="${1.4*s}"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RI-3*s}" fill="${metal}" stroke="#8b98a2" stroke-width="${0.8*s}"/>`;
+    const faceR = RI - 5*s;
+    p += `<circle cx="${c}" cy="${c}" r="${faceR}" fill="${black}"/><circle cx="${c}" cy="${c}" r="${faceR}" fill="url(#skCore)"/>`;
+    // the Omnitrix hourglass: arc-based halves fill the full top & bottom of
+    // the lens (no gap at the rim, never crossing into the slot band)
+    const th = 52*Math.PI/180, hx = faceR*Math.sin(th), hy = faceR*Math.cos(th);
+    const hgTop = `M ${c-hx} ${c-hy} A ${faceR} ${faceR} 0 0 1 ${c+hx} ${c-hy} L ${c} ${c} Z`;
+    const hgBot = `M ${c+hx} ${c+hy} A ${faceR} ${faceR} 0 0 1 ${c-hx} ${c+hy} L ${c} ${c} Z`;
+    p += `<path d="${hgTop}" fill="${gLite}" filter="url(#skGlow)"/><path d="${hgBot}" fill="${gLite}" filter="url(#skGlow)"/>`;
+    p += `<path d="${hgTop}" fill="none" stroke="${black}" stroke-width="${1.4*s}" stroke-linejoin="round"/><path d="${hgBot}" fill="none" stroke="${black}" stroke-width="${1.4*s}" stroke-linejoin="round"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${2.2*s}" fill="${bright}" filter="url(#skGlow)"/>`;
     return p;
   },
   ice(c, RO, RI, s, rad, accent, bright) {
-    let p = `<circle cx="${c}" cy="${c}" r="${RO}" fill="none" stroke="${hexRgba(bright,0.5)}" stroke-width="${1.2*s}" filter="url(#skGlow)"/>`;
-    // outward crystal shards (alternating long/short)
-    for (let i = 0; i < 20; i++) {
-      const a = rad(i*18), bx = c+RO*Math.cos(a), by = c+RO*Math.sin(a);
-      const len = (i%2===0?12:7)*s, tx = c+(RO+len)*Math.cos(a), ty = c+(RO+len)*Math.sin(a);
-      const perp = a+Math.PI/2, w = (i%2===0?3:2)*s;
-      p += `<polygon points="${bx+w*Math.cos(perp)},${by+w*Math.sin(perp)} ${tx},${ty} ${bx-w*Math.cos(perp)},${by-w*Math.sin(perp)}" fill="${hexRgba(bright,0.5)}" stroke="${hexRgba(accent,0.6)}" stroke-width="${0.4*s}"/>`;
+    // frosty aura + frosted double rim
+    let p = `<circle cx="${c}" cy="${c}" r="${RO+16*s}" fill="url(#skAura)"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RO}" fill="none" stroke="${hexRgba(bright,0.7)}" stroke-width="${1.6*s}" filter="url(#skGlowStrong)"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RI}" fill="none" stroke="${hexRgba(bright,0.5)}" stroke-width="${1.2*s}" filter="url(#skGlow)"/>`;
+    // frozen-glass faceting across the ring band (makes the DIAL icy)
+    for (let i = 0; i < 16; i++) {
+      const a0 = rad(i*22.5), a1 = rad(i*22.5+11);
+      p += `<polygon points="${c+RI*Math.cos(a0)},${c+RI*Math.sin(a0)} ${c+RO*Math.cos(a1)},${c+RO*Math.sin(a1)} ${c+RO*Math.cos(a0)},${c+RO*Math.sin(a0)}" fill="${hexRgba(bright,0.10+(i%2)*0.06)}" stroke="${hexRgba(bright,0.22)}" stroke-width="${0.4*s}"/>`;
     }
+    // hoar-frost feather crystals from the outer rim
+    for (let i = 0; i < 24; i++) { const a = rad(i*15), r0 = RO-1*s, r1 = RO-(5+(i%3)*4)*s; p += `<line x1="${c+r0*Math.cos(a)}" y1="${c+r0*Math.sin(a)}" x2="${c+r1*Math.cos(a)}" y2="${c+r1*Math.sin(a)}" stroke="${hexRgba(bright,0.35)}" stroke-width="${0.5*s}" stroke-linecap="round"/>`; }
+    const shard = (a, base, len, w, fill, stroke) => {
+      const bx = c+base*Math.cos(a), by = c+base*Math.sin(a), tx = c+(base+len)*Math.cos(a), ty = c+(base+len)*Math.sin(a), perp = a+Math.PI/2;
+      return `<polygon points="${bx+w*Math.cos(perp)},${by+w*Math.sin(perp)} ${tx},${ty} ${bx-w*Math.cos(perp)},${by-w*Math.sin(perp)}" fill="${fill}" stroke="${stroke}" stroke-width="${0.4*s}"/>`;
+    };
+    // outward crystal shards (spiky ice crown)
+    for (let i = 0; i < 20; i++) { const a = rad(i*18); p += shard(a, RO, (i%2===0?13:7)*s, (i%2===0?3:2)*s, hexRgba(bright,0.6), hexRgba(accent,0.75)); }
+    // inward shards (jagged inner edge, growing into the band)
+    for (let i = 0; i < 16; i++) { const a = rad(i*22.5+6); p += shard(a, RI, (5+(i%2)*4)*s, 2*s, hexRgba(bright,0.45), hexRgba(accent,0.5)); }
     // detailed snowflake in the centre hole
     const Rf = RI * 0.7;
     let g = `<g transform="translate(${c} ${c})">`;
@@ -442,44 +502,91 @@ const SKIN_PREVIEW_BUILDERS = {
     return p;
   },
   dragon(c, RO, RI, s, rad, accent, bright) {
-    // wavy flame tongues licking outward
-    let p = '';
-    for (let i = 0; i < 18; i++) {
-      const a = rad(i*20), bx = c+RO*Math.cos(a), by = c+RO*Math.sin(a);
-      const len = (9+prand(i)*8)*s, bend = a+(prand(i+10)-0.5)*0.7;
-      const mx = c+(RO+len*0.55)*Math.cos(bend), my = c+(RO+len*0.55)*Math.sin(bend);
-      const ta = a+(prand(i+20)-0.5)*0.3, tx = c+(RO+len)*Math.cos(ta), ty = c+(RO+len)*Math.sin(ta);
-      const perp = a+Math.PI/2, w = 2*s;
-      const b1x = bx+w*Math.cos(perp), b1y = by+w*Math.sin(perp), b2x = bx-w*Math.cos(perp), b2y = by-w*Math.sin(perp);
-      p += `<path d="M${b1x} ${b1y} Q ${mx} ${my} ${tx} ${ty} Q ${mx} ${my} ${b2x} ${b2y} Z" fill="${hexRgba(i%2?accent:bright,0.6)}" filter="url(#skGlow)"/>`;
+    // fiery aura + dense layered flame-breath
+    let p = `<circle cx="${c}" cy="${c}" r="${RO+20*s}" fill="url(#skAura)"/>`;
+    const flame = (a, len, w, fill, op) => {
+      const bx = c+RO*Math.cos(a), by = c+RO*Math.sin(a);
+      const bend = a+(prand(Math.round(a*30)+10)-0.5)*0.7, mx = c+(RO+len*0.55)*Math.cos(bend), my = c+(RO+len*0.55)*Math.sin(bend);
+      const ta = a+(prand(Math.round(a*30)+20)-0.5)*0.3, tx = c+(RO+len)*Math.cos(ta), ty = c+(RO+len)*Math.sin(ta);
+      const perp = a+Math.PI/2, b1x = bx+w*Math.cos(perp), b1y = by+w*Math.sin(perp), b2x = bx-w*Math.cos(perp), b2y = by-w*Math.sin(perp);
+      return `<path d="M${b1x} ${b1y} Q ${mx} ${my} ${tx} ${ty} Q ${mx} ${my} ${b2x} ${b2y} Z" fill="${hexRgba(fill,op)}" filter="url(#skGlow)"/>`;
+    };
+    for (let i = 0; i < 30; i++) { const a = rad(i*12); p += flame(a, (10+prand(i)*12)*s, 2.6*s, accent, 0.55); }
+    for (let i = 0; i < 30; i++) { const a = rad(i*12+6); p += flame(a, (6+prand(i+50)*8)*s, 1.5*s, bright, 0.7); }
+    // dragon-hide ring: dark band backing + overlapping scales across the WHOLE band
+    p += `<circle cx="${c}" cy="${c}" r="${(RO+RI)/2}" fill="none" stroke="rgba(16,6,3,0.88)" stroke-width="${RO-RI+2*s}"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RO}" fill="none" stroke="${hexRgba(accent,0.75)}" stroke-width="${1.6*s}" filter="url(#skGlow)"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RI}" fill="none" stroke="${hexRgba(accent,0.5)}" stroke-width="${1*s}"/>`;
+    for (let row = 0; row < 7; row++) {
+      const rr = RI + (4 + row * 4.6) * s;
+      if (rr > RO - 1*s) break;
+      const n = 34, off = (row % 2) * Math.PI / n;
+      for (let i = 0; i < n; i++) {
+        const a = i*(2*Math.PI/n)+off, bx = c+(rr+2.2*s)*Math.cos(a), by = c+(rr+2.2*s)*Math.sin(a), sw = (Math.PI/n)*0.92;
+        const x0 = c+rr*Math.cos(a-sw), y0 = c+rr*Math.sin(a-sw), x1 = c+rr*Math.cos(a+sw), y1 = c+rr*Math.sin(a+sw);
+        p += `<path d="M${x0} ${y0} Q ${bx} ${by} ${x1} ${y1}" fill="none" stroke="${hexRgba(accent, row%2?0.45:0.6)}" stroke-width="${0.8*s}"/>`;
+      }
     }
-    // scale ring
-    p += `<circle cx="${c}" cy="${c}" r="${RO}" fill="none" stroke="${hexRgba(accent,0.6)}" stroke-width="${2*s}" filter="url(#skGlow)"/>`;
-    p += `<circle cx="${c}" cy="${c}" r="${RO-3*s}" fill="none" stroke="${hexRgba(accent,0.3)}" stroke-width="${1*s}" stroke-dasharray="3 3"/>`;
-    // geometric dragon-head sigil in the centre hole
-    p += `<g transform="translate(${c} ${c}) scale(${s*1.15})">
-      <path d="M-11 5 L-5 -9 L-1 -3 L0 -9 L1 -3 L5 -9 L11 5 L4 3 L0 8 L-4 3 Z" fill="${hexRgba(accent,0.7)}" stroke="${bright}" stroke-width="0.7" filter="url(#skGlowStrong)"/>
-      <circle cx="-4" cy="-1" r="1.1" fill="#fff2d0"/><circle cx="4" cy="-1" r="1.1" fill="#fff2d0"/>
+    // proper front-facing dragon head filling the centre hole
+    const dk = '#2e0a03', hide = hexRgba(accent, 0.85);
+    p += `<g transform="translate(${c} ${c}) scale(${RI/30})">
+      <path d="M-6 -12 C -11 -16 -15 -21 -16 -28 C -12 -21 -8 -16 -3 -13 Z" fill="${dk}" stroke="${hexRgba(accent,0.9)}" stroke-width="0.8"/>
+      <path d="M6 -12 C 11 -16 15 -21 16 -28 C 12 -21 8 -16 3 -13 Z" fill="${dk}" stroke="${hexRgba(accent,0.9)}" stroke-width="0.8"/>
+      <path d="M-9 -9 C -14 -10 -17 -13 -19 -17 C -15 -12 -11 -10 -7 -7 Z" fill="${dk}" stroke="${hexRgba(accent,0.7)}" stroke-width="0.6"/>
+      <path d="M9 -9 C 14 -10 17 -13 19 -17 C 15 -12 11 -10 7 -7 Z" fill="${dk}" stroke="${hexRgba(accent,0.7)}" stroke-width="0.6"/>
+      <path d="M-10 -2 L-17 0 L-10 3 Z" fill="${dk}" stroke="${hexRgba(accent,0.7)}" stroke-width="0.6"/>
+      <path d="M10 -2 L17 0 L10 3 Z" fill="${dk}" stroke="${hexRgba(accent,0.7)}" stroke-width="0.6"/>
+      <path d="M0 -14 C -5 -14 -9 -11 -10 -6 C -11 -2 -10 2 -7 5 C -5 7 -4 9 -3 12 L 0 16 L 3 12 C 4 9 5 7 7 5 C 10 2 11 -2 10 -6 C 9 -11 5 -14 0 -14 Z" fill="${hide}" stroke="${bright}" stroke-width="0.8" filter="url(#skGlowStrong)"/>
+      <path d="M-4 -10 Q 0 -8 4 -10" fill="none" stroke="${dk}" stroke-width="0.5"/>
+      <path d="M-5 -7 Q 0 -5 5 -7" fill="none" stroke="${dk}" stroke-width="0.5"/>
+      <path d="M-6 -4 Q 0 -2 6 -4" fill="none" stroke="${dk}" stroke-width="0.5"/>
+      <path d="M-9 -6 L-3 -4 L-9 -2 Z" fill="${dk}"/><path d="M9 -6 L3 -4 L9 -2 Z" fill="${dk}"/>
+      <path d="M-8 -4 L-3 -2.5 L-7.5 -0.5 Z" fill="#ffe08a" filter="url(#skGlow)"/><path d="M8 -4 L3 -2.5 L7.5 -0.5 Z" fill="#ffe08a" filter="url(#skGlow)"/>
+      <circle cx="-5.4" cy="-2.4" r="0.65" fill="${dk}"/><circle cx="5.4" cy="-2.4" r="0.65" fill="${dk}"/>
+      <ellipse cx="-1.7" cy="7" rx="0.9" ry="1.3" fill="#160500"/><ellipse cx="1.7" cy="7" rx="0.9" ry="1.3" fill="#160500"/>
+      <path d="M-5 10 Q 0 13.5 5 10 L 5 11 Q 0 15 -5 11 Z" fill="${dk}" stroke="${hexRgba(bright,0.5)}" stroke-width="0.4"/>
+      <path d="M-3.8 10.4 L-3 13.4 L-2.2 10.8 Z" fill="#ffe9c9"/>
+      <path d="M-0.8 11.2 L0 14.4 L0.8 11.2 Z" fill="#ffe9c9"/>
+      <path d="M2.2 10.8 L3 13.4 L3.8 10.4 Z" fill="#ffe9c9"/>
     </g>`;
     return p;
   },
-  aclock(c, RO, RI, s, rad, accent, bright) {
-    let p = `<circle cx="${c}" cy="${c}" r="${RO}" fill="none" stroke="${hexRgba(bright,0.7)}" stroke-width="${1.6*s}" filter="url(#skGlow)"/>`;
-    p += `<circle cx="${c}" cy="${c}" r="${RI}" fill="rgba(8,7,14,0.4)" stroke="${hexRgba(accent,0.5)}" stroke-width="${1*s}"/>`;
-    const numerals = ['XII','I','II','III','IIII','V','VI','VII','VIII','IX','X','XI'];
-    const Rn = RI * 0.78;
-    numerals.forEach((num, i) => { const a = rad(i*30-90), x = c+Rn*Math.cos(a), y = c+Rn*Math.sin(a); p += `<text x="${x}" y="${y+2.4*s}" fill="${hexRgba(bright,0.9)}" font-size="${7*s}" font-family="Georgia,serif" text-anchor="middle">${num}</text>`; });
-    for (let i = 0; i < 60; i++) { if (i % 5 === 0) continue; const a = rad(i*6), r0 = RI*0.9, r1 = RI*0.96; p += `<line x1="${c+r0*Math.cos(a)}" y1="${c+r0*Math.sin(a)}" x2="${c+r1*Math.cos(a)}" y2="${c+r1*Math.sin(a)}" stroke="${hexRgba(accent,0.4)}" stroke-width="${0.5*s}"/>`; }
-    p += `<line class="pv-hour" x1="${c}" y1="${c}" x2="${c}" y2="${c-RI*0.42}" stroke="${bright}" stroke-width="${2.2*s}" stroke-linecap="round" filter="url(#skGlow)"/>`;
-    p += `<line class="pv-min" x1="${c}" y1="${c}" x2="${c}" y2="${c-RI*0.6}" stroke="${bright}" stroke-width="${1.5*s}" stroke-linecap="round" filter="url(#skGlow)"/>`;
-    p += `<line class="pv-sec" x1="${c}" y1="${c}" x2="${c}" y2="${c-RI*0.68}" stroke="${hexRgba(accent,0.9)}" stroke-width="${0.8*s}" stroke-linecap="round"/>`;
-    p += `<circle cx="${c}" cy="${c}" r="${2.2*s}" fill="${bright}" filter="url(#skGlow)"/>`;
+  aclock(c, RO, RI, s, rad, accent, bright, numerals) {
+    // solid metallic bezel + opaque face
+    let p = `<circle cx="${c}" cy="${c}" r="${RO+1*s}" fill="none" stroke="${hexRgba(accent,0.5)}" stroke-width="${4.5*s}" filter="url(#skGlowStrong)"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RO}" fill="none" stroke="${hexRgba(bright,0.95)}" stroke-width="${2.4*s}" filter="url(#skGlow)"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RI+4*s}" fill="none" stroke="${hexRgba(accent,0.7)}" stroke-width="${2.6*s}"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RI+1.5*s}" fill="rgba(9,8,17,0.9)" stroke="${hexRgba(bright,0.4)}" stroke-width="${0.8*s}"/>`;
+    for (let i = 0; i < 60; i++) {
+      const a = rad(i*6), hour = i % 5 === 0, r0 = RI*(hour?0.84:0.92), r1 = RI*0.99;
+      p += `<line x1="${c+r0*Math.cos(a)}" y1="${c+r0*Math.sin(a)}" x2="${c+r1*Math.cos(a)}" y2="${c+r1*Math.sin(a)}" stroke="${hexRgba(hour?bright:accent, hour?0.9:0.45)}" stroke-width="${(hour?1.5:0.6)*s}"/>`;
+    }
+    // numerals — roman or english 12-hour
+    const roman = ['XII','I','II','III','IIII','V','VI','VII','VIII','IX','X','XI'];
+    const english = ['12','1','2','3','4','5','6','7','8','9','10','11'];
+    const nums = numerals === 'english' ? english : roman;
+    const Rn = RI * 0.72;
+    nums.forEach((num, i) => { const a = rad(i*30-90), x = c+Rn*Math.cos(a), y = c+Rn*Math.sin(a); p += `<text x="${x}" y="${y+2.7*s}" fill="${bright}" font-size="${8*s}" font-family="Georgia,'Times New Roman',serif" font-weight="700" text-anchor="middle">${num}</text>`; });
+    const Lh = RI*0.5, Lm = RI*0.74, Ls = RI*0.8;
+    const leaf = (L, w, tail) => `M ${c} ${c-L} Q ${c+w} ${c-L*0.42} ${c+w*0.55} ${c-L*0.12} L ${c+w*0.45} ${c+tail} L ${c-w*0.45} ${c+tail} L ${c-w*0.55} ${c-L*0.12} Q ${c-w} ${c-L*0.42} ${c} ${c-L} Z`;
+    p += `<path class="pv-hour" d="${leaf(Lh, 4.4*s, 11*s)}" fill="${bright}" stroke="${hexRgba(accent,0.8)}" stroke-width="${0.7*s}" filter="url(#skGlow)"/>`;
+    p += `<path class="pv-min" d="${leaf(Lm, 3.2*s, 13*s)}" fill="${bright}" stroke="${hexRgba(accent,0.8)}" stroke-width="${0.7*s}" filter="url(#skGlow)"/>`;
+    p += `<g class="pv-sec"><polygon points="${c-0.7*s},${c+13*s} ${c-1.2*s},${c} ${c},${c-Ls} ${c+1.2*s},${c} ${c+0.7*s},${c+13*s}" fill="#ff5a4d" filter="url(#skGlow)"/><circle cx="${c}" cy="${c+13*s}" r="${2*s}" fill="#ff5a4d"/></g>`;
+    p += `<circle cx="${c}" cy="${c}" r="${3.6*s}" fill="${bright}" stroke="${hexRgba(accent,0.8)}" stroke-width="${0.8*s}" filter="url(#skGlow)"/><circle cx="${c}" cy="${c}" r="${1.5*s}" fill="#ff5a4d"/>`;
     return p;
   },
   dclock(c, RO, RI, s, rad, accent, bright) {
-    let p = `<circle cx="${c}" cy="${c}" r="${RO}" fill="none" stroke="${hexRgba(bright,0.6)}" stroke-width="${1.4*s}" filter="url(#skGlow)"/>`;
-    p += `<circle cx="${c}" cy="${c}" r="${RI}" fill="rgba(8,7,14,0.4)" stroke="${hexRgba(accent,0.5)}" stroke-width="${1*s}"/>`;
-    for (let i = 0; i < 40; i++) { const a = rad(i*9), r0 = RO+2*s, r1 = RO+5*s; p += `<line x1="${c+r0*Math.cos(a)}" y1="${c+r0*Math.sin(a)}" x2="${c+r1*Math.cos(a)}" y2="${c+r1*Math.sin(a)}" stroke="${hexRgba(accent,0.35)}" stroke-width="${0.6*s}"/>`; }
+    // cyan aura + solid double bezel
+    let p = `<circle cx="${c}" cy="${c}" r="${RO+12*s}" fill="url(#skAura)"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RO+1*s}" fill="none" stroke="${hexRgba(accent,0.45)}" stroke-width="${4*s}" filter="url(#skGlowStrong)"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RO}" fill="none" stroke="${hexRgba(bright,0.9)}" stroke-width="${2*s}" filter="url(#skGlow)"/>`;
+    for (let i = 0; i < 48; i++) { const a = rad(i*7.5), big = i%4===0, r0 = RO+2*s, r1 = RO+(big?7:4)*s; p += `<line x1="${c+r0*Math.cos(a)}" y1="${c+r0*Math.sin(a)}" x2="${c+r1*Math.cos(a)}" y2="${c+r1*Math.sin(a)}" stroke="${hexRgba(big?bright:accent, big?0.7:0.35)}" stroke-width="${(big?1:0.6)*s}"/>`; }
+    const arc = (rr, a0, a1) => { const q = (deg) => `${c+rr*Math.cos(rad(deg))} ${c+rr*Math.sin(rad(deg))}`; return `M ${q(a0)} A ${rr} ${rr} 0 0 1 ${q(a1)}`; };
+    p += `<path d="${arc(RO-6*s,-140,-40)}" fill="none" stroke="${hexRgba(accent,0.5)}" stroke-width="${0.8*s}" stroke-dasharray="1 3"/>`;
+    p += `<path d="${arc(RO-6*s,40,140)}" fill="none" stroke="${hexRgba(accent,0.5)}" stroke-width="${0.8*s}" stroke-dasharray="1 3"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RI+2*s}" fill="rgba(4,12,20,0.9)" stroke="${hexRgba(accent,0.7)}" stroke-width="${1.4*s}"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${RI-1*s}" fill="none" stroke="${hexRgba(bright,0.3)}" stroke-width="${0.6*s}"/>`;
+    [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sy]) => { const bx = c+sx*RI*0.62, by = c+sy*RI*0.42, L = 4*s; p += `<path d="M ${bx+sx*L} ${by} L ${bx} ${by} L ${bx} ${by+sy*L}" fill="none" stroke="${hexRgba(accent,0.7)}" stroke-width="${0.9*s}" stroke-linecap="round"/>`; });
     return p;
   },
 };
@@ -501,11 +608,14 @@ function renderSkinPreview(stage, designId) {
   let parts = `<defs>
     <filter id="skGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="${1.6*s}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <filter id="skGlowStrong" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="${3*s}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="skGlowXL" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="${5*s}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <linearGradient id="skBand" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${hexRgba(accent, a*0.45)}"/><stop offset="100%" stop-color="rgba(8,6,14,${a*0.75})"/></linearGradient>
+    <radialGradient id="skAura" cx="50%" cy="50%" r="50%"><stop offset="55%" stop-color="${hexRgba(accent,0)}"/><stop offset="82%" stop-color="${hexRgba(accent,0.30)}"/><stop offset="100%" stop-color="${hexRgba(accent,0)}"/></radialGradient>
+    <radialGradient id="skCore" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${hexRgba(bright,0.95)}"/><stop offset="60%" stop-color="${hexRgba(accent,0.65)}"/><stop offset="100%" stop-color="${hexRgba(accent,0)}"/></radialGradient>
   </defs>`;
 
   const builder = SKIN_PREVIEW_BUILDERS[designId];
-  if (builder) parts += builder(c, RO, RI, s, rad, accent, bright);
+  if (builder) parts += builder(c, RO, RI, s, rad, accent, bright, ts.numerals);
 
   // Clear band segments (mirror content.js — "options crystal clear")
   for (let i = 0; i < 8; i++) {
@@ -685,6 +795,15 @@ function applyTabVisibility() {
   if (d.clock) {
     const tzSel = $('timezone-select');
     if (tzSel) tzSel.value = getTabSettings(id).timezone || DEFAULT_TIMEZONE;
+  }
+
+  // Number-style toggle applies only to the Analog Clock (V).
+  const numCtrl = $('numerals-ctrl');
+  if (numCtrl) numCtrl.style.display = id === 'aclock' ? '' : 'none';
+  if (id === 'aclock') {
+    const cur = getTabSettings(id).numerals || 'roman';
+    $('numerals-roman')?.classList.toggle('active', cur === 'roman');
+    $('numerals-english')?.classList.toggle('active', cur === 'english');
   }
 
   const useBtn = $('use-design-btn');
@@ -1128,10 +1247,10 @@ function updateDelayWarn(sec) {
   const w = $('delay-warn');
   if (!w) return;
   if (!isFinite(sec)) { w.textContent = ''; return; }
-  if (sec < 0.2)      w.textContent = '⚠ Very short — the dial may fire on ordinary right-clicks. Default is 0.5s.';
-  else if (sec > 1)   w.textContent = '⚠ Long holds get tiring fast. Default 0.5s is the sweet spot.';
-  else                w.textContent = '✓ Comfortable range (default 0.5s).';
-  w.className = 'delay-warn ' + (sec < 0.2 || sec > 1 ? 'bad' : 'ok');
+  if (sec < 0.05)     w.textContent = '⚠ Very short — the dial may fire on ordinary right-clicks. Default is 0.1s.';
+  else if (sec > 0.5) w.textContent = '⚠ Holding more than 0.5s can make using the mouse gesture boring. Default is 0.1s.';
+  else                w.textContent = '✓ Snappy range (default 0.1s).';
+  w.className = 'delay-warn ' + (sec < 0.05 || sec > 0.5 ? 'bad' : 'ok');
 }
 
 // ── wiring ────────────────────────────────────────────────────────────────────
@@ -1201,6 +1320,13 @@ function wire() {
       renderPreview(); saveSoon();
     });
   }
+
+  ['numerals-roman', 'numerals-english'].forEach((bid) => {
+    $(bid)?.addEventListener('click', (e) => {
+      setTabNumerals(state.selectedTab, e.currentTarget.dataset.val);
+      applyTabVisibility(); renderPreview(); saveSoon();
+    });
+  });
 
   $('save-btn')?.addEventListener('click', () => saveNow(true));
   $('reset-dial')?.addEventListener('click', () => {
