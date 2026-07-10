@@ -23,8 +23,8 @@
  * dashboard → product → "Share / Checkout link"). These are public URLs.
  */
 const FUNGIES_CHECKOUT = {
-  monthly: 'https://YOUR-STORE.fungies.io/checkout/monthly-pass', // ← Monthly Pass link
-  legend:  'https://YOUR-STORE.fungies.io/checkout/legend-plan',  // ← Legend Plan link
+  monthly: 'https://shivankxd.app.fungies.io/subscribe/b225a780-23fa-425c-bf0b-7953d6f4d638', // Monthly Pass
+  legend:  'https://shivankxd.app.fungies.io/checkout/1a4463cb-16f7-4cf8-bf24-c6b171cd2670',  // Legend Plan
 };
 
 /** Plan metadata (display only). Order matters: index = tier rank. */
