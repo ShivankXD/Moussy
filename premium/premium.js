@@ -1,330 +1,275 @@
 /**
  * MOUSSY — Premium Page Controller  (premium.js)
  * ================================================
- * Handles all interactivity on premium.html:
- *  – Plan state management (read / write via chrome.storage)
- *  – CTA button click handling & loading animation
- *  – Toast notification system
- *  – Particle burst effect on upgrade confirmation
- *  – Keyboard accessibility (Enter / Space on cards)
- *  – Graceful fallback when running outside extension context
+ * Payments are handled by Fungies.io (Merchant of Record — it takes the money
+ * and handles tax). This page:
+ *   – reads the current plan from the background service worker (the single
+ *     source of truth is chrome.storage.local `moussy_plan`)
+ *   – opens the Fungies hosted checkout for a chosen plan
+ *   – LEGEND: lets the buyer paste the one-time key emailed by Fungies; the
+ *     background worker redeems it against our Cloudflare Worker (POST /redeem)
+ *   – MONTHLY: lets the buyer confirm the email they checked out with; the
+ *     background worker verifies the subscription (GET /subscription-status)
+ *   – reflects the current plan with NO downgrade paths
  *
- * Payment integration
- * ────────────────────
- * Replace the `PAYMENT_URLS` map with real Stripe / payment-processor
- * checkout links. The `handlePurchase()` function is the single hook point.
- *
- * Storage schema (chrome.storage.local)
- * ──────────────────────────────────────
- *  {
- *    moussy_plan:          'free' | 'monthly' | 'legend',
- *    moussy_plan_expires:  null | ISO-8601 string   (monthly only),
- *    moussy_license_key:   null | string            (legend only)
- *  }
+ * No secrets and no key list live here — only the public Fungies checkout URLs.
+ * All validation happens in the background worker + Cloudflare Worker.
  */
 
 'use strict';
 
-// ─── Config ───────────────────────────────────────────────────────────────────
-
 /**
- * Replace these with real Stripe Checkout / payment URLs when ready.
- * Each key maps to the plan identifier used throughout this file.
- * @type {Record<string, string>}
+ * Fungies hosted-checkout links for each paid product (from your Fungies
+ * dashboard → product → "Share / Checkout link"). These are public URLs.
  */
-const PAYMENT_URLS = {
-  monthly: 'https://buy.stripe.com/PLACEHOLDER_MONTHLY',
-  legend:  'https://buy.stripe.com/PLACEHOLDER_LEGEND',
+const FUNGIES_CHECKOUT = {
+  monthly: 'https://YOUR-STORE.fungies.io/checkout/monthly-pass', // ← Monthly Pass link
+  legend:  'https://YOUR-STORE.fungies.io/checkout/legend-plan',  // ← Legend Plan link
 };
 
-/** Storage keys */
-const STORAGE_KEYS = {
-  plan:       'moussy_plan',
-  expires:    'moussy_plan_expires',
-  licenseKey: 'moussy_license_key',
-};
-
-/** Plan metadata (drives UI state) */
+/** Plan metadata (display only). Order matters: index = tier rank. */
 const PLANS = {
-  free: {
-    id:    'free',
-    label: 'Free Engine',
-    price: '$0.00',
-  },
-  monthly: {
-    id:    'monthly',
-    label: 'Monthly Pass',
-    price: '$3.99/mo',
-  },
-  legend: {
-    id:    'legend',
-    label: 'Legend Plan',
-    price: '$29.99',
-  },
+  free:    { id: 'free',    label: 'Free Engine',  rank: 0 },
+  monthly: { id: 'monthly', label: 'Monthly Pass', rank: 1 },
+  legend:  { id: 'legend',  label: 'Legend Plan',  rank: 2 },
 };
-
-// ─── State ────────────────────────────────────────────────────────────────────
 
 /** @type {'free'|'monthly'|'legend'} */
 let currentPlan = 'free';
 
-// ─── Storage Adapter ──────────────────────────────────────────────────────────
-/**
- * Wraps chrome.storage.local with a Promise API.
- * Falls back to localStorage when running outside an extension context
- * (e.g., during standalone development / design review).
- */
-const Storage = {
-  async get(keys) {
-    if (typeof chrome !== 'undefined' && chrome?.storage?.local) {
-      return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
+/** Thin promise wrapper around chrome.runtime.sendMessage. */
+function bg(type, payload) {
+  return new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage({ type, payload }, (resp) => {
+        if (chrome.runtime.lastError) resolve({ ok: false, error: chrome.runtime.lastError.message });
+        else resolve(resp || { ok: false });
+      });
+    } catch (e) {
+      resolve({ ok: false, error: e?.message });
     }
-    // Fallback: localStorage
-    const result = {};
-    for (const key of (Array.isArray(keys) ? keys : [keys])) {
-      try { result[key] = JSON.parse(localStorage.getItem(key)); } catch { result[key] = null; }
-    }
-    return result;
-  },
-
-  async set(items) {
-    if (typeof chrome !== 'undefined' && chrome?.storage?.local) {
-      return new Promise((resolve) => chrome.storage.local.set(items, resolve));
-    }
-    for (const [k, v] of Object.entries(items)) {
-      localStorage.setItem(k, JSON.stringify(v));
-    }
-  },
-};
+  });
+}
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
-
 let _toastTimer = null;
-
-/**
- * Show a transient notification at the bottom of the screen.
- * @param {string}  message
- * @param {number}  [duration=3200]  ms to display
- * @param {'ok'|'error'}  [type='ok']
- */
 function showToast(message, duration = 3200, type = 'ok') {
   const el = document.getElementById('toast');
   if (!el) return;
-
   clearTimeout(_toastTimer);
   el.textContent = message;
   el.style.borderColor = type === 'error' ? '#f87171' : 'var(--border-bright)';
   el.classList.add('visible');
-
   _toastTimer = setTimeout(() => el.classList.remove('visible'), duration);
 }
 
-// ─── Particle Burst ───────────────────────────────────────────────────────────
-/**
- * Spawns a brief CSS particle explosion at the given button element.
- * Particles are small divs animated with random trajectories via CSS variables.
- * All particles self-remove after animation ends.
- *
- * @param {HTMLElement} anchorEl    Element to launch particles from
- * @param {'purple'|'gold'}  theme
- */
+// ─── Particle burst (flair on checkout launch) ─────────────────────────────────
 function spawnParticles(anchorEl, theme = 'purple') {
-  const rect  = anchorEl.getBoundingClientRect();
-  const cx    = rect.left + rect.width  / 2;
-  const cy    = rect.top  + rect.height / 2;
+  if (!anchorEl) return;
+  const rect = anchorEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
   const color = theme === 'gold' ? '#f5c542' : '#a855f7';
   const COUNT = 18;
-
   for (let i = 0; i < COUNT; i++) {
-    const p  = document.createElement('div');
-    const angle  = (i / COUNT) * 360;
-    const dist   = 60 + Math.random() * 80;
-    const size   = 3 + Math.random() * 4;
-    const dur    = 500 + Math.random() * 400;
-
+    const p = document.createElement('div');
+    const angle = (i / COUNT) * 360, dist = 60 + Math.random() * 80;
+    const size = 3 + Math.random() * 4, dur = 500 + Math.random() * 400;
     Object.assign(p.style, {
-      position:        'fixed',
-      left:            `${cx}px`,
-      top:             `${cy}px`,
-      width:           `${size}px`,
-      height:          `${size}px`,
-      borderRadius:    '50%',
-      background:      color,
-      boxShadow:       `0 0 ${size * 2}px ${color}`,
-      pointerEvents:   'none',
-      zIndex:          '999999',
-      transform:       'translate(-50%, -50%)',
-      transition:      `transform ${dur}ms cubic-bezier(0,0,0.2,1), opacity ${dur}ms ease`,
-      opacity:         '1',
+      position: 'fixed', left: `${cx}px`, top: `${cy}px`,
+      width: `${size}px`, height: `${size}px`, borderRadius: '50%',
+      background: color, boxShadow: `0 0 ${size * 2}px ${color}`,
+      pointerEvents: 'none', zIndex: '999999', transform: 'translate(-50%, -50%)',
+      transition: `transform ${dur}ms cubic-bezier(0,0,0.2,1), opacity ${dur}ms ease`, opacity: '1',
     });
-
     document.body.appendChild(p);
-
-    // Trigger after paint
     requestAnimationFrame(() => {
       const rad = (angle * Math.PI) / 180;
-      const tx  = Math.cos(rad) * dist;
-      const ty  = Math.sin(rad) * dist;
-      p.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
-      p.style.opacity   = '0';
+      p.style.transform = `translate(calc(-50% + ${Math.cos(rad) * dist}px), calc(-50% + ${Math.sin(rad) * dist}px))`;
+      p.style.opacity = '0';
     });
-
     setTimeout(() => p.remove(), dur + 50);
   }
 }
 
-// ─── UI Updater ───────────────────────────────────────────────────────────────
-/**
- * Reflects the current plan in the DOM.
- * – Marks the active plan card with an aria-selected attribute
- * – Updates the Free button text if user has upgraded
- * @param {'free'|'monthly'|'legend'} plan
- */
+// ─── UI: reflect current plan (NO downgrade paths) ─────────────────────────────
+function setBtn(btn, text, enabled) {
+  if (!btn) return;
+  btn.querySelector('.btn-text').textContent = text;
+  btn.disabled = !enabled;
+  btn.classList.toggle('is-owned', !enabled);
+}
+
 function reflectPlanInUI(plan) {
-  const btnFree    = document.getElementById('btn-free');
-  const cardFree   = document.getElementById('plan-free');
-  const cardMonth  = document.getElementById('plan-monthly');
-  const cardLegend = document.getElementById('plan-legend');
+  const rank = PLANS[plan].rank;
 
-  [cardFree, cardMonth, cardLegend].forEach((c) => c?.removeAttribute('aria-selected'));
+  ['plan-free', 'plan-monthly', 'plan-legend'].forEach((id) =>
+    document.getElementById(id)?.removeAttribute('aria-selected'));
+  document.getElementById(`plan-${plan}`)?.setAttribute('aria-selected', 'true');
 
-  const activeCard = document.getElementById(`plan-${plan}`);
-  activeCard?.setAttribute('aria-selected', 'true');
-
-  if (btnFree) {
-    btnFree.querySelector('.btn-text').textContent =
-      plan === 'free' ? 'CURRENT PLAN' : 'DOWNGRADE';
-    btnFree.disabled = plan === 'free';
-  }
+  setBtn(document.getElementById('btn-free'),
+    plan === 'free' ? 'CURRENT PLAN' : 'INCLUDED IN YOUR PLAN', false);
 
   const btnMonthly = document.getElementById('btn-monthly');
-  if (btnMonthly) {
-    btnMonthly.querySelector('.btn-text').textContent =
-      plan === 'monthly' ? 'CURRENT PLAN' :
-      plan === 'legend'  ? 'DOWNGRADE'    : 'ACTIVATE MONTHLY';
-    btnMonthly.disabled = plan === 'monthly';
-  }
+  if (rank === 0)              setBtn(btnMonthly, 'ACTIVATE MONTHLY', true);
+  else if (plan === 'monthly') setBtn(btnMonthly, '✓ YOUR PLAN', false);
+  else                         setBtn(btnMonthly, 'LEGEND COVERS THIS', false);
 
   const btnLegend = document.getElementById('btn-legend');
-  if (btnLegend) {
-    btnLegend.querySelector('.btn-text').textContent =
-      plan === 'legend' ? 'CURRENT PLAN' : 'UNLOCK LEGEND STATUS';
-    btnLegend.disabled = plan === 'legend';
+  if (plan === 'legend')  setBtn(btnLegend, '✓ YOUR PLAN', false);
+  else if (rank === 1)    setBtn(btnLegend, 'UPGRADE TO LEGEND', true);
+  else                    setBtn(btnLegend, 'UNLOCK LEGEND STATUS', true);
+
+  // Activation rows start hidden and are revealed on demand (plan button or
+  // hint click). Once a tier is owned there is nothing left to redeem for it,
+  // so hide that tier's row + hint entirely.
+  if (plan === 'legend') {
+    // Legend covers everything — no activation needed anywhere.
+    ['legend-activate', 'legend-hint', 'monthly-activate', 'monthly-hint'].forEach(hide);
+  } else if (plan === 'monthly') {
+    hide('monthly-activate'); hide('monthly-hint');   // Monthly owned
+    show('legend-hint');                              // can still upgrade to Legend
+  } else {
+    show('monthly-hint'); show('legend-hint');        // free: both restore hints visible
   }
 }
 
-// ─── Purchase Handler ─────────────────────────────────────────────────────────
-/**
- * Central hook for initiating a purchase.
- * Currently redirects to the Stripe checkout URL.
- * Replace / extend this function to integrate your payment processor.
- *
- * @param {'monthly'|'legend'} plan
- * @param {HTMLButtonElement}  btnEl
- */
-async function handlePurchase(plan, btnEl) {
-  if (plan === currentPlan) return;
+function hide(id) { const el = document.getElementById(id); if (el) el.hidden = true; }
+function show(id) { const el = document.getElementById(id); if (el) el.hidden = false; }
 
-  // Animate the button into loading state
-  btnEl.classList.add('loading');
+// ─── Checkout launch ────────────────────────────────────────────────────────
+function openCheckout(plan) {
+  const url = FUNGIES_CHECKOUT[plan];
+  if (!url || url.includes('YOUR-STORE')) {
+    showToast('Checkout link not configured yet.', 3500, 'error');
+    return false;
+  }
+  window.open(url, '_blank', 'noopener');
+  return true;
+}
 
-  try {
-    // ── Simulate async check (e.g., validate user session) ────────────
-    await new Promise((r) => setTimeout(r, 800));
+// ─── Legend key activation ───────────────────────────────────────────────────
+/** Live-format a Legend key into XXXXX-XXXXX-XXXXX as the user types. */
+function formatKey(raw) {
+  const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 15);
+  return clean.replace(/(.{5})(.{1,5})?(.{1,5})?/, (_, a, b, c) =>
+    [a, b, c].filter(Boolean).join('-'));
+}
 
-    const url = PAYMENT_URLS[plan];
+async function activateLegendKey() {
+  const input = document.getElementById('legend-key');
+  const btn = document.getElementById('btn-legend-activate');
+  const key = (input?.value || '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$/.test(key)) {
+    showToast('Enter a full key: XXXXX-XXXXX-XXXXX', 3500, 'error');
+    input?.focus();
+    return;
+  }
+  btn.disabled = true;
+  const prev = btn.textContent;
+  btn.textContent = 'CHECKING…';
+  const resp = await bg('REDEEM_LEGEND', { key });
+  btn.disabled = false;
+  btn.textContent = prev;
 
-    if (!url || url.includes('PLACEHOLDER')) {
-      // Payment URLs not yet configured — show developer notice
-      showToast(`[ DEV ] Payment gateway not yet wired for "${PLANS[plan].label}". Hook PAYMENT_URLS in premium.js.`, 5000, 'error');
-      btnEl.classList.remove('loading');
-      return;
-    }
+  if (resp.ok) {
+    currentPlan = resp.plan || 'legend';
+    reflectPlanInUI(currentPlan);
+    spawnParticles(document.getElementById('btn-legend'), 'gold');
+    showToast('✓ Legend activated — lifetime access unlocked!', 4500);
+    return;
+  }
+  showToast(legendError(resp.reason), 4500, 'error');
+}
 
-    // Open Stripe checkout in a new tab
-    window.open(url, '_blank', 'noopener,noreferrer');
-    showToast(`Redirecting to checkout for ${PLANS[plan].label}…`);
-
-  } catch (err) {
-    console.error('[MOUSSY:premium] Purchase error:', err);
-    showToast('Something went wrong. Please try again.', 4000, 'error');
-  } finally {
-    btnEl.classList.remove('loading');
+function legendError(reason) {
+  switch (reason) {
+    case 'already_used': return 'That key is already activated on another device.';
+    case 'invalid_key':  return 'Key not recognized. Check for typos.';
+    case 'bad_format':   return 'Key must look like XXXXX-XXXXX-XXXXX.';
+    case 'network':      return 'Network issue — check your connection and retry.';
+    default:             return 'Could not activate that key. Please try again.';
   }
 }
 
-/**
- * Simulate a successful plan activation (used for testing UI flow).
- * In production this would be called via a post-payment webhook callback
- * or a query-string token verification on page load.
- *
- * @param {'free'|'monthly'|'legend'} plan
- */
-async function activatePlan(plan) {
-  const data = {
-    [STORAGE_KEYS.plan]: plan,
-    [STORAGE_KEYS.expires]:    plan === 'monthly' ? getMonthFromNow() : null,
-    [STORAGE_KEYS.licenseKey]: plan === 'legend'  ? generateMockKey() : null,
-  };
+// ─── Monthly purchase confirmation ───────────────────────────────────────────
+async function confirmMonthly() {
+  const input = document.getElementById('monthly-email');
+  const btn = document.getElementById('btn-monthly-confirm');
+  const email = (input?.value || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showToast('Enter the email you used at checkout.', 3500, 'error');
+    input?.focus();
+    return;
+  }
+  btn.disabled = true;
+  const prev = btn.textContent;
+  btn.textContent = 'CHECKING…';
+  const resp = await bg('SET_MONTHLY_IDENTITY', { email });
+  btn.disabled = false;
+  btn.textContent = prev;
 
-  await Storage.set(data);
-  currentPlan = plan;
-  reflectPlanInUI(plan);
+  currentPlan = resp.plan || currentPlan;
+  reflectPlanInUI(currentPlan);
+  if (currentPlan === 'monthly') {
+    spawnParticles(document.getElementById('btn-monthly'), 'purple');
+    showToast('✓ Monthly Pass active — premium unlocked!', 4500);
+  } else {
+    showToast('No active subscription found for that email yet. If you just paid, give it a moment and retry.', 5000, 'error');
+  }
 }
 
-// ─── Utilities ────────────────────────────────────────────────────────────────
-
-function getMonthFromNow() {
-  const d = new Date();
-  d.setMonth(d.getMonth() + 1);
-  return d.toISOString();
-}
-
-function generateMockKey() {
-  // Generates a readable mock license key for UI demonstration
-  const seg = () => Math.random().toString(36).substring(2, 7).toUpperCase();
-  return `MSY-${seg()}-${seg()}-${seg()}`;
-}
-
-// ─── Event Wiring ─────────────────────────────────────────────────────────────
-
+// ─── Event wiring ──────────────────────────────────────────────────────────────
 function bindButtons() {
-  const btns = document.querySelectorAll('.cta-btn[data-plan]');
+  document.getElementById('btn-monthly')?.addEventListener('click', (e) => {
+    const btn = e.currentTarget;
+    if (btn.disabled) { showToast(`// You already have ${PLANS[currentPlan].label}.`); return; }
+    spawnParticles(btn, 'purple');
+    if (openCheckout('monthly')) {
+      show('monthly-activate');
+      showToast('Opening secure checkout… confirm your email here once you\'ve paid.', 4000);
+      document.getElementById('monthly-email')?.focus();
+    }
+  });
 
-  btns.forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const plan = btn.dataset.plan;
+  document.getElementById('btn-legend')?.addEventListener('click', (e) => {
+    const btn = e.currentTarget;
+    if (btn.disabled) { showToast('// You already have Legend access.'); return; }
+    spawnParticles(btn, 'gold');
+    if (openCheckout('legend')) {
+      show('legend-activate');
+      showToast('Opening secure checkout… paste your key here once you receive it.', 4000);
+      document.getElementById('legend-key')?.focus();
+    }
+  });
 
-      if (plan === 'free') {
-        if (currentPlan === 'free') {
-          showToast('// FREE ENGINE is already your active config.');
-        } else {
-          await activatePlan('free');
-          showToast('// Reverted to FREE ENGINE.');
-        }
-        return;
-      }
+  // Hints reveal the activation rows (for buyers restoring on a new install).
+  document.getElementById('legend-hint')?.addEventListener('click', () => {
+    show('legend-activate'); document.getElementById('legend-key')?.focus();
+  });
+  document.getElementById('monthly-hint')?.addEventListener('click', () => {
+    show('monthly-activate'); document.getElementById('monthly-email')?.focus();
+  });
 
-      if (plan === currentPlan) {
-        showToast(`// ${PLANS[plan].label} is already active.`);
-        return;
-      }
+  // Activation actions.
+  document.getElementById('btn-legend-activate')?.addEventListener('click', activateLegendKey);
+  document.getElementById('btn-monthly-confirm')?.addEventListener('click', confirmMonthly);
 
-      // Activate the plan directly (mock — wire PAYMENT_URLS for real checkout).
-      const theme = plan === 'legend' ? 'gold' : 'purple';
-      spawnParticles(btn, theme);
-      btn.classList.add('loading');
-      await new Promise((r) => setTimeout(r, 700));
-      await activatePlan(plan);
-      btn.classList.remove('loading');
-      showToast(`✓ ${PLANS[plan].label} activated — premium slots unlocked.`, 4000);
-    });
+  const keyInput = document.getElementById('legend-key');
+  keyInput?.addEventListener('input', (e) => { e.target.value = formatKey(e.target.value); });
+  keyInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') activateLegendKey(); });
+  document.getElementById('monthly-email')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmMonthly();
   });
 }
 
 function bindFooterLinks() {
-  const noopLinks = ['link-terms', 'link-privacy', 'link-refund', 'link-contact'];
-  noopLinks.forEach((id) => {
+  const contact = document.getElementById('link-contact');
+  contact?.addEventListener('click', (e) => {
+    e.preventDefault();
+    try { window.open(chrome.runtime.getURL('contact/contact.html'), '_blank', 'noopener'); }
+    catch { showToast('Contact page unavailable.', 3000); }
+  });
+  ['link-terms', 'link-privacy', 'link-refund'].forEach((id) => {
     document.getElementById(id)?.addEventListener('click', (e) => {
       e.preventDefault();
       showToast(`[ DEV ] "${id.replace('link-', '')}" page not yet linked.`, 3000);
@@ -332,14 +277,11 @@ function bindFooterLinks() {
   });
 }
 
-/**
- * Keyboard accessibility: allow Enter / Space on plan cards to focus the CTA.
- */
 function bindCardKeyboard() {
   document.querySelectorAll('.plan-card').forEach((card) => {
     card.setAttribute('tabindex', '0');
     card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target === card) {
         e.preventDefault();
         card.querySelector('.cta-btn')?.click();
       }
@@ -347,36 +289,28 @@ function bindCardKeyboard() {
   });
 }
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+// ─── Init ──────────────────────────────────────────────────────────────────────
+async function refreshPlan() {
+  const resp = await bg('GET_LICENSE_STATE');
+  currentPlan = resp.ok && resp.plan ? resp.plan : 'free';
+  reflectPlanInUI(currentPlan);
+}
 
 async function init() {
-  // Load persisted plan from storage
-  const stored = await Storage.get([STORAGE_KEYS.plan, STORAGE_KEYS.expires]);
-  const savedPlan = stored[STORAGE_KEYS.plan];
-
-  // Check if monthly subscription has expired
-  if (savedPlan === 'monthly') {
-    const expires = stored[STORAGE_KEYS.expires];
-    if (expires && new Date(expires) < new Date()) {
-      console.warn('[MOUSSY:premium] Monthly subscription expired — reverting to free.');
-      await activatePlan('free');
-    } else {
-      currentPlan = 'monthly';
-    }
-  } else if (savedPlan === 'legend') {
-    currentPlan = 'legend';
-  } else {
-    currentPlan = 'free';
-  }
-
-  reflectPlanInUI(currentPlan);
+  reflectPlanInUI('free');   // optimistic paint before the async check
+  await refreshPlan();
   bindButtons();
   bindFooterLinks();
   bindCardKeyboard();
 
-  // Expose activatePlan to the global scope for post-payment webhook callbacks
-  // e.g. called by a payment success redirect:  window.moussyActivate('legend')
-  window.moussyActivate = activatePlan;
+  // If the plan changes underneath us (e.g. the 24h re-check downgrades an
+  // expired Monthly, or a redeem completes), keep the UI honest.
+  chrome.storage?.onChanged?.addListener((changes, area) => {
+    if (area === 'local' && changes.moussy_plan) {
+      currentPlan = changes.moussy_plan.newValue || 'free';
+      reflectPlanInUI(currentPlan);
+    }
+  });
 
   console.log(`[MOUSSY:premium] UI ready. Current plan: ${currentPlan}`);
 }

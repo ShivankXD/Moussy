@@ -1,0 +1,37 @@
+# ════════════════════════════════════════════════════════════════════════════
+#  MOUSSY — License Worker (Cloudflare Workers + D1)
+#  Same Pages/D1/Workers pattern as NativeOffice — deployed as its OWN Worker,
+#  with its OWN D1 database, so the two projects never share infra state.
+# ════════════════════════════════════════════════════════════════════════════
+name = "moussy-license"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# ── D1: the Legend key inventory (single source of truth for "valid") ────────
+# Create it once with:   wrangler d1 create moussy-license
+# then paste the printed database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "moussy-license"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# ── Non-secret config ────────────────────────────────────────────────────────
+[vars]
+FUNGIES_API_BASE = "https://api.fungies.io"
+# Lock this to your published extension origin for production, e.g.
+#   ALLOWED_ORIGIN = "chrome-extension://<your-32-char-extension-id>"
+# Left as "*" so it works while the extension id is still unstable (unpacked dev).
+ALLOWED_ORIGIN = "*"
+
+# ── Rate limiting on /redeem (brute-force protection) ────────────────────────
+# Native Cloudflare Rate Limiting binding (open beta). If your account/plan
+# doesn't expose it yet, delete this block — the Worker guards for its absence
+# and /redeem still works (the ~36^15 keyspace already makes guessing hopeless).
+[[ratelimit]]
+name = "REDEEM_LIMITER"
+namespace_id = "1001"          # any unique integer within this account
+simple = { limit = 8, period = 60 }   # 8 attempts / 60s per client IP
+
+# ── Secrets (DO NOT put here — set via wrangler, they land encrypted) ─────────
+#   wrangler secret put FUNGIES_API_KEY      # your Fungies READ api key (x-api-key)

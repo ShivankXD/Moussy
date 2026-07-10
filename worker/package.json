@@ -1,0 +1,17 @@
+{
+  "name": "moussy-license",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MOUSSY license validation Worker (Cloudflare Workers + D1)",
+  "type": "module",
+  "scripts": {
+    "seed": "node scripts/generate-seed.mjs",
+    "migrate": "wrangler d1 migrations apply moussy-license",
+    "migrate:local": "wrangler d1 migrations apply moussy-license --local",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

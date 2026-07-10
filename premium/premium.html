@@ -676,6 +676,18 @@
     }
     .cta-btn-legend:active { transform: translateY(0); }
 
+    /* Owned / already-covered plan button */
+    .cta-btn:disabled, .cta-btn.is-owned {
+      cursor: default;
+      background: rgba(74, 222, 128, 0.10);
+      border: 1px solid rgba(74, 222, 128, 0.40);
+      color: var(--green);
+      box-shadow: none;
+      transform: none;
+    }
+    .cta-btn:disabled::before, .cta-btn.is-owned::before { display: none; }
+    .cta-btn:disabled:hover, .cta-btn.is-owned:hover { transform: none; box-shadow: none; }
+
     /* Button loading state (for JS hook) */
     .cta-btn.loading { pointer-events: none; opacity: 0.7; }
     .cta-btn.loading .btn-text { opacity: 0; }
@@ -983,7 +995,7 @@
 
         <div class="badge badge-popular">
           <span class="badge-dot"></span>
-          RECOMMENDED
+          FLEXIBLE
         </div>
 
         <h2 class="plan-name">MONTHLY PASS</h2>
@@ -1040,6 +1052,14 @@
         <button class="cta-btn cta-btn-monthly" id="btn-monthly" data-plan="monthly">
           <span class="btn-text">ACTIVATE MONTHLY</span>
         </button>
+
+        <!-- After returning from Fungies checkout, confirm the purchase email -->
+        <div class="activate-row" id="monthly-activate" hidden>
+          <input class="activate-input" id="monthly-email" type="email" inputmode="email"
+                 autocomplete="email" placeholder="Email used at checkout" />
+          <button class="activate-btn" id="btn-monthly-confirm" type="button">CONFIRM PURCHASE</button>
+        </div>
+        <p class="activate-hint" id="monthly-hint">Already subscribed on another device? Enter your checkout email to restore.</p>
       </article>
 
       <!-- ── LEGEND ─────────────────────────────────────────────────────── -->
@@ -1052,7 +1072,7 @@
 
         <div class="badge badge-max">
           <span class="badge-dot"></span>
-          MAX OUTPUT
+          ★ RECOMMENDED
         </div>
 
         <h2 class="plan-name">LEGEND PLAN</h2>
@@ -1105,6 +1125,15 @@
         <button class="cta-btn cta-btn-legend" id="btn-legend" data-plan="legend">
           <span class="btn-text">UNLOCK LEGEND STATUS</span>
         </button>
+
+        <!-- Paste the key emailed by Fungies after the one-time purchase -->
+        <div class="activate-row" id="legend-activate" hidden>
+          <input class="activate-input" id="legend-key" type="text" spellcheck="false"
+                 autocapitalize="characters" autocomplete="off" maxlength="17"
+                 placeholder="XXXXX-XXXXX-XXXXX" />
+          <button class="activate-btn activate-btn-gold" id="btn-legend-activate" type="button">ACTIVATE KEY</button>
+        </div>
+        <p class="activate-hint" id="legend-hint">Already have a Legend key? Enter it to activate.</p>
       </article>
 
     </main>
@@ -1135,7 +1164,7 @@
       </div>
 
       <p class="footer-disclaimer" style="margin-top: 24px;">
-        Payments processed via Stripe · Instant activation · 7-day refund window on Monthly Pass
+        Payments processed securely via Fungies · Instant activation · 7-day refund window on Monthly Pass
       </p>
 
       <div class="footer-links">
@@ -1150,6 +1179,37 @@
 
   <!-- Toast notification -->
   <div id="toast" role="alert" aria-live="polite"></div>
+
+  <style>
+    /* Key / email activation rows under each paid plan */
+    .activate-row { display: flex; gap: 8px; margin-top: 12px; }
+    .activate-input {
+      flex: 1 1 auto; min-width: 0; padding: 10px 12px;
+      background: rgba(0,0,0,0.35); color: #fff;
+      border: 1px solid var(--border-bright, rgba(168,85,247,0.5)); border-radius: 8px;
+      font: 600 13px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.06em; text-transform: uppercase; outline: none;
+    }
+    #monthly-email { text-transform: none; letter-spacing: 0; }
+    .activate-input::placeholder { color: rgba(255,255,255,0.35); }
+    .activate-input:focus { border-color: var(--purple, #a855f7); box-shadow: 0 0 0 3px rgba(168,85,247,0.25); }
+    .activate-btn {
+      flex: 0 0 auto; padding: 10px 14px; border-radius: 8px; cursor: pointer;
+      border: 1px solid var(--purple, #a855f7); background: rgba(168,85,247,0.18);
+      color: #fff; font: 700 12px/1 inherit; letter-spacing: 0.08em; text-transform: uppercase;
+      transition: background 0.15s, transform 0.05s;
+    }
+    .activate-btn:hover { background: rgba(168,85,247,0.32); }
+    .activate-btn:active { transform: translateY(1px); }
+    .activate-btn:disabled { opacity: 0.55; cursor: default; }
+    .activate-btn-gold { border-color: var(--gold, #f5c542); background: rgba(245,197,66,0.16); }
+    .activate-btn-gold:hover { background: rgba(245,197,66,0.3); }
+    .activate-hint {
+      margin: 8px 2px 0; font-size: 11.5px; color: rgba(255,255,255,0.5);
+      cursor: pointer; user-select: none;
+    }
+    .activate-hint:hover { color: rgba(255,255,255,0.8); text-decoration: underline; }
+  </style>
 
   <script src="premium.js"></script>
 </body>

@@ -1,7 +1,7 @@
 /**
  * MOUSSY — Background Control Tower  (background.js)
  * ════════════════════════════════════════════════════
- * Manifest V3 service worker — type: "module"
+ * Manifest V3 service worker (classic). Payments: Fungies.io (MoR) + license Worker.
  *
  * ┌─────────────────────────────────────────────────────────────────────┐
  * │  Architecture map                                                   │
@@ -33,6 +33,13 @@
 
 'use strict';
 
+// ── Payments: Fungies.io (Merchant of Record) + our license Worker ────────────
+//    Fungies takes the money + handles tax. Our Cloudflare Worker (see /worker)
+//    is the runtime source of truth for whether a Legend key or Monthly
+//    subscription is valid. NO secrets live in the extension — only this public
+//    Worker URL. Set it after `wrangler deploy`.
+const LICENSE_WORKER_BASE = 'https://moussy-license.YOUR-SUBDOMAIN.workers.dev'; // ← set me
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // ── Constants
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -53,6 +60,13 @@ const STORAGE_SOUND_ID     = 'moussy_sound_id';       // key into SOUND_CATALOG
 const STORAGE_SOUND_CUSTOM = 'moussy_sound_custom';   // { dataUrl } trimmed clip (premium)
 const STORAGE_ACTIVE_DESIGN   = 'moussy_active_design';    // 'radial'|'ghost'|'magic'|'ninja'|'aclock'|'dclock'|'chrono'|'ice'|'dragon'
 const STORAGE_DESIGN_SETTINGS = 'moussy_design_settings';  // { [designId]: {size,opacity,delay,timezone} } — excludes 'radial' (legacy flat keys)
+
+// ── License / payments (Fungies) — mirrored to chrome.storage.sync so a paid
+//    tier survives uninstall→reinstall when the user has Chrome Sync on ────────
+const STORAGE_DEVICE_ID     = 'moussy_device_id';      // stable per-install id, bound to a redeemed key
+const STORAGE_LEGEND_KEY    = 'moussy_legend_key';     // the redeemed Legend key string
+const STORAGE_MONTHLY_ID    = 'moussy_monthly_id';     // { email?, userId? } captured at Monthly checkout
+const STORAGE_LICENSE_CACHE = 'moussy_license_cache';  // { plan, lastOkAt } — 24h cache + offline grace
 
 const OFFSCREEN_URL       = 'offscreen/offscreen.html';
 // NOTE: chrome.offscreen.Reason.AUDIO_PLAYBACK is used directly in createDocument().
@@ -89,6 +103,24 @@ function storageGet(keys) {
  */
 function storageSet(items) {
   return new Promise((resolve) => chrome.storage.local.set(items, resolve));
+}
+
+/**
+ * chrome.storage.sync helpers — used only for the license anchors (device id,
+ * legend key, monthly identity) so a purchase can be restored after a
+ * reinstall. Wrapped so a disabled/over-quota sync store never throws.
+ */
+function syncGet(keys) {
+  return new Promise((resolve) => {
+    try { chrome.storage.sync.get(keys, (v) => resolve(chrome.runtime.lastError ? {} : (v || {}))); }
+    catch { resolve({}); }
+  });
+}
+function syncSet(items) {
+  return new Promise((resolve) => {
+    try { chrome.storage.sync.set(items, () => resolve()); }
+    catch { resolve(); }
+  });
 }
 
 /**
@@ -642,6 +674,31 @@ async function handleMessage(message, sender) {
       return { ok: true };
     }
 
+    // ── Redeem a Legend key (from premium.js "Activate Legend") ───────────
+    case 'REDEEM_LEGEND': {
+      const r = await LicenseManager.redeemLegend(payload?.key);
+      return { ok: r.ok, reason: r.reason, plan: await StateManager.getPlan() };
+    }
+
+    // ── Bind the Monthly purchaser identity captured after checkout ───────
+    case 'SET_MONTHLY_IDENTITY': {
+      await LicenseManager.setMonthlyIdentity(payload || {});
+      return { ok: true, plan: await StateManager.getPlan() };
+    }
+
+    // ── Force a subscription re-check now (e.g. returning from checkout) ───
+    case 'CHECK_SUBSCRIPTION': {
+      await LicenseManager.checkSubscription('manual', true);
+      const plan = await StateManager.getPlan();
+      return { ok: true, plan, isPremium: plan !== 'free' };
+    }
+
+    // ── Current license state for the premium/settings UI ─────────────────
+    case 'GET_LICENSE_STATE': {
+      const plan = await StateManager.getPlan();
+      return { ok: true, plan, isPremium: plan !== 'free' };
+    }
+
     default:
       console.warn('[MOUSSY] Unknown message type:', type);
       return { ok: false, error: `Unknown type: ${type}` };
@@ -708,6 +765,184 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
     if (Object.keys(seed).length) await storageSet(seed);
     console.log(`[MOUSSY] Updated from ${previousVersion}. Storage migration complete.`);
   }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ── License Manager — Fungies + Worker → moussy_plan (the premium gate)
+// ═══════════════════════════════════════════════════════════════════════════════
+// The rest of the extension only reads `moussy_plan` ('free'|'monthly'|'legend').
+// This manager keeps that value truthful:
+//   • Legend  — a one-time key redeemed against POST /redeem (device-bound).
+//   • Monthly — re-verified against GET /subscription-status at most every 24h.
+// Purchase anchors (device id, legend key, monthly identity) are mirrored into
+// chrome.storage.sync so a paid tier is restored after uninstall→reinstall when
+// the user has Chrome Sync on. When the Worker is briefly unreachable we hold the
+// last-good plan for a grace window instead of downgrading on a blip.
+
+const KEY_FORMAT_RE = /^[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$/;
+const SUB_CHECK_MS  = 24 * 60 * 60 * 1000;      // re-verify Monthly at most once/24h
+const GRACE_MS      = 7  * 24 * 60 * 60 * 1000; // keep last-good plan up to 7d if offline
+
+const LicenseManager = {
+  /** Stable id bound to a redeemed key. Prefers sync so it survives reinstall. */
+  async getDeviceId() {
+    let id = (await syncGet(STORAGE_DEVICE_ID))[STORAGE_DEVICE_ID]
+          || (await storageGet(STORAGE_DEVICE_ID))[STORAGE_DEVICE_ID];
+    if (!id) id = (self.crypto?.randomUUID?.() || `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    // Keep both stores in agreement (e.g. after a sync-restored reinstall).
+    await storageSet({ [STORAGE_DEVICE_ID]: id });
+    await syncSet({ [STORAGE_DEVICE_ID]: id });
+    return id;
+  },
+
+  /** Redeem a Legend key. On success, plan → 'legend' (permanent). */
+  async redeemLegend(rawKey) {
+    const key = String(rawKey || '').trim().toUpperCase().replace(/\s+/g, '');
+    if (!KEY_FORMAT_RE.test(key)) return { ok: false, reason: 'bad_format' };
+
+    const device_id = await this.getDeviceId();
+    let res;
+    try {
+      res = await fetch(`${LICENSE_WORKER_BASE}/redeem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, device_id }),
+      });
+    } catch {
+      return { ok: false, reason: 'network' };
+    }
+    let data = {};
+    try { data = await res.json(); } catch {}
+
+    if (data.valid) {
+      await storageSet({
+        [STORAGE_LEGEND_KEY]: key,
+        [STORAGE_PLAN]: 'legend',
+        [STORAGE_LICENSE_CACHE]: { plan: 'legend', lastOkAt: new Date().toISOString() },
+      });
+      await syncSet({ [STORAGE_LEGEND_KEY]: key });
+      console.log('[MOUSSY] Legend activated.');
+      return { ok: true };
+    }
+    return { ok: false, reason: data.reason || 'invalid' };
+  },
+
+  /** Store the Monthly purchaser identity (from checkout) and verify now. */
+  async setMonthlyIdentity({ email, userId } = {}) {
+    const rec = {};
+    if (email)  rec.email  = String(email).trim().toLowerCase();
+    if (userId) rec.userId = String(userId).trim();
+    if (!rec.email && !rec.userId) return;
+    await storageSet({ [STORAGE_MONTHLY_ID]: rec });
+    await syncSet({ [STORAGE_MONTHLY_ID]: rec });
+    await this.checkSubscription('identity-set', true);
+  },
+
+  /**
+   * Re-verify the Monthly subscription and reflect it in `moussy_plan`.
+   * Legend owners short-circuit (their tier is permanent). Throttled to once
+   * per 24h unless `force`.
+   */
+  async checkSubscription(reason, force = false) {
+    const legendKey = (await storageGet(STORAGE_LEGEND_KEY))[STORAGE_LEGEND_KEY];
+    if (legendKey) { await this._ensurePlan('legend'); return; }
+
+    const ident = (await storageGet(STORAGE_MONTHLY_ID))[STORAGE_MONTHLY_ID];
+    if (!ident || (!ident.email && !ident.userId)) return; // never bought Monthly
+
+    if (!force) {
+      const cache = (await storageGet(STORAGE_LICENSE_CACHE))[STORAGE_LICENSE_CACHE];
+      if (cache?.lastOkAt && (Date.now() - Date.parse(cache.lastOkAt) < SUB_CHECK_MS)) {
+        await this._ensurePlan(cache.plan || 'monthly');   // within 24h cache window
+        return;
+      }
+    }
+
+    const qs = ident.userId
+      ? `userId=${encodeURIComponent(ident.userId)}`
+      : `email=${encodeURIComponent(ident.email)}`;
+    let res, data;
+    try {
+      res = await fetch(`${LICENSE_WORKER_BASE}/subscription-status?${qs}`);
+      data = await res.json();
+    } catch {
+      await this._applyGrace('monthly');   // Worker/network down → don't punish
+      return;
+    }
+
+    if (res.ok && data.active) {
+      await storageSet({
+        [STORAGE_PLAN]: 'monthly',
+        [STORAGE_LICENSE_CACHE]: { plan: 'monthly', lastOkAt: new Date().toISOString() },
+      });
+    } else if (res.status >= 500 || data.reason === 'upstream_unavailable') {
+      await this._applyGrace('monthly');   // transient upstream error → grace
+    } else {
+      await this._downgradeIfMonthly();    // definitive "not active" → free
+    }
+  },
+
+  async _ensurePlan(plan) {
+    const cur = await StateManager.getPlan();
+    if (cur !== plan) await storageSet({ [STORAGE_PLAN]: plan });
+  },
+
+  async _applyGrace(expectPlan) {
+    const cache = (await storageGet(STORAGE_LICENSE_CACHE))[STORAGE_LICENSE_CACHE];
+    if (cache?.plan === expectPlan && cache.lastOkAt &&
+        (Date.now() - Date.parse(cache.lastOkAt) < GRACE_MS)) {
+      await this._ensurePlan(expectPlan);   // still inside grace → keep access
+      return;
+    }
+    await this._downgradeIfMonthly();       // grace expired → drop to free
+  },
+
+  async _downgradeIfMonthly() {
+    if ((await StateManager.getPlan()) === 'monthly') {
+      await storageSet({ [STORAGE_PLAN]: 'free' });
+      console.log('[MOUSSY] Monthly subscription inactive → downgraded to free.');
+    }
+  },
+};
+
+/**
+ * Restore any purchase carried across a reinstall (via chrome.storage.sync),
+ * then verify it. Runs on boot + browser startup.
+ */
+async function bootLicense(reason) {
+  // Re-hydrate license anchors from sync into local when local is empty
+  // (fresh install after a reinstall with Chrome Sync on).
+  const s = await syncGet([STORAGE_DEVICE_ID, STORAGE_LEGEND_KEY, STORAGE_MONTHLY_ID]);
+  const l = await storageGet([STORAGE_DEVICE_ID, STORAGE_LEGEND_KEY, STORAGE_MONTHLY_ID]);
+  const patch = {};
+  for (const k of [STORAGE_DEVICE_ID, STORAGE_LEGEND_KEY, STORAGE_MONTHLY_ID]) {
+    if (l[k] === undefined && s[k] !== undefined) patch[k] = s[k];
+  }
+  if (Object.keys(patch).length) await storageSet(patch);
+
+  const legendKey = (await storageGet(STORAGE_LEGEND_KEY))[STORAGE_LEGEND_KEY];
+  if (legendKey) {
+    const cache = (await storageGet(STORAGE_LICENSE_CACHE))[STORAGE_LICENSE_CACHE];
+    const fresh = cache?.plan === 'legend' && cache.lastOkAt &&
+                  (Date.now() - Date.parse(cache.lastOkAt) < SUB_CHECK_MS);
+    if (fresh) {
+      await LicenseManager._ensurePlan('legend');
+    } else {
+      const r = await LicenseManager.redeemLegend(legendKey);   // idempotent same-device
+      if (!r.ok) await LicenseManager._applyGrace('legend');    // sync-off edge: keep grace
+    }
+  } else {
+    await LicenseManager.checkSubscription(reason, false);
+  }
+}
+
+chrome.runtime.onStartup?.addListener(() => bootLicense('startup'));
+bootLicense('boot');
+
+// 24h re-verification of the Monthly subscription (survives SW suspension).
+chrome.alarms?.create('moussy_sub_check', { periodInMinutes: SUB_CHECK_MS / 60000 });
+chrome.alarms?.onAlarm.addListener((a) => {
+  if (a.name === 'moussy_sub_check') LicenseManager.checkSubscription('alarm', true);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

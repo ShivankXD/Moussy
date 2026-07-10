@@ -527,28 +527,12 @@ const SKIN_PREVIEW_BUILDERS = {
         p += `<path d="M${x0} ${y0} Q ${bx} ${by} ${x1} ${y1}" fill="none" stroke="${hexRgba(accent, row%2?0.45:0.6)}" stroke-width="${0.8*s}"/>`;
       }
     }
-    // proper front-facing dragon head filling the centre hole
-    const dk = '#2e0a03', hide = hexRgba(accent, 0.85);
-    p += `<g transform="translate(${c} ${c}) scale(${RI/30})">
-      <path d="M-6 -12 C -11 -16 -15 -21 -16 -28 C -12 -21 -8 -16 -3 -13 Z" fill="${dk}" stroke="${hexRgba(accent,0.9)}" stroke-width="0.8"/>
-      <path d="M6 -12 C 11 -16 15 -21 16 -28 C 12 -21 8 -16 3 -13 Z" fill="${dk}" stroke="${hexRgba(accent,0.9)}" stroke-width="0.8"/>
-      <path d="M-9 -9 C -14 -10 -17 -13 -19 -17 C -15 -12 -11 -10 -7 -7 Z" fill="${dk}" stroke="${hexRgba(accent,0.7)}" stroke-width="0.6"/>
-      <path d="M9 -9 C 14 -10 17 -13 19 -17 C 15 -12 11 -10 7 -7 Z" fill="${dk}" stroke="${hexRgba(accent,0.7)}" stroke-width="0.6"/>
-      <path d="M-10 -2 L-17 0 L-10 3 Z" fill="${dk}" stroke="${hexRgba(accent,0.7)}" stroke-width="0.6"/>
-      <path d="M10 -2 L17 0 L10 3 Z" fill="${dk}" stroke="${hexRgba(accent,0.7)}" stroke-width="0.6"/>
-      <path d="M0 -14 C -5 -14 -9 -11 -10 -6 C -11 -2 -10 2 -7 5 C -5 7 -4 9 -3 12 L 0 16 L 3 12 C 4 9 5 7 7 5 C 10 2 11 -2 10 -6 C 9 -11 5 -14 0 -14 Z" fill="${hide}" stroke="${bright}" stroke-width="0.8" filter="url(#skGlowStrong)"/>
-      <path d="M-4 -10 Q 0 -8 4 -10" fill="none" stroke="${dk}" stroke-width="0.5"/>
-      <path d="M-5 -7 Q 0 -5 5 -7" fill="none" stroke="${dk}" stroke-width="0.5"/>
-      <path d="M-6 -4 Q 0 -2 6 -4" fill="none" stroke="${dk}" stroke-width="0.5"/>
-      <path d="M-9 -6 L-3 -4 L-9 -2 Z" fill="${dk}"/><path d="M9 -6 L3 -4 L9 -2 Z" fill="${dk}"/>
-      <path d="M-8 -4 L-3 -2.5 L-7.5 -0.5 Z" fill="#ffe08a" filter="url(#skGlow)"/><path d="M8 -4 L3 -2.5 L7.5 -0.5 Z" fill="#ffe08a" filter="url(#skGlow)"/>
-      <circle cx="-5.4" cy="-2.4" r="0.65" fill="${dk}"/><circle cx="5.4" cy="-2.4" r="0.65" fill="${dk}"/>
-      <ellipse cx="-1.7" cy="7" rx="0.9" ry="1.3" fill="#160500"/><ellipse cx="1.7" cy="7" rx="0.9" ry="1.3" fill="#160500"/>
-      <path d="M-5 10 Q 0 13.5 5 10 L 5 11 Q 0 15 -5 11 Z" fill="${dk}" stroke="${hexRgba(bright,0.5)}" stroke-width="0.4"/>
-      <path d="M-3.8 10.4 L-3 13.4 L-2.2 10.8 Z" fill="#ffe9c9"/>
-      <path d="M-0.8 11.2 L0 14.4 L0.8 11.2 Z" fill="#ffe9c9"/>
-      <path d="M2.2 10.8 L3 13.4 L3.8 10.4 Z" fill="#ffe9c9"/>
-    </g>`;
+    // dragon artwork filling the centre hole (bundled PNG, clipped round)
+    const hole = RI - 2*s;
+    p += `<clipPath id="pv-dragon-clip"><circle cx="${c}" cy="${c}" r="${hole}"/></clipPath>`;
+    p += `<circle cx="${c}" cy="${c}" r="${hole}" fill="#160600"/>`;
+    p += `<image href="../assets/art/dragon-center.png" xlink:href="../assets/art/dragon-center.png" x="${c-hole}" y="${c-hole}" width="${hole*2}" height="${hole*2}" preserveAspectRatio="xMidYMid slice" clip-path="url(#pv-dragon-clip)"/>`;
+    p += `<circle cx="${c}" cy="${c}" r="${hole}" fill="none" stroke="${hexRgba(bright,0.35)}" stroke-width="${1*s}"/>`;
     return p;
   },
   aclock(c, RO, RI, s, rad, accent, bright, numerals) {

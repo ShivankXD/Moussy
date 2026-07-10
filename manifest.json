@@ -25,8 +25,7 @@
   },
 
   "background": {
-    "service_worker": "background/background.js",
-    "type": "module"
+    "service_worker": "background/background.js"
   },
 
   "content_scripts": [
@@ -45,7 +44,8 @@
     "scripting",
     "offscreen",
     "contextMenus",
-    "tabs"
+    "tabs",
+    "alarms"
   ],
 
   "host_permissions": [
@@ -58,6 +58,7 @@
         "assets/sounds/*.mp3",
         "assets/sounds/*.ogg",
         "assets/icons/*.png",
+        "assets/art/*.png",
         "premium/premium.html"
       ],
       "matches": ["<all_urls>"]
