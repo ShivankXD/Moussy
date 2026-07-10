@@ -38,7 +38,7 @@
 //    is the runtime source of truth for whether a Legend key or Monthly
 //    subscription is valid. NO secrets live in the extension — only this public
 //    Worker URL. Set it after `wrangler deploy`.
-const LICENSE_WORKER_BASE = 'https://moussy-license.YOUR-SUBDOMAIN.workers.dev'; // ← set me
+const LICENSE_WORKER_BASE = 'https://moussy-license.shivankprabhudessai.workers.dev';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ── Constants

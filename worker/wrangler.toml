@@ -13,7 +13,7 @@ compatibility_date = "2025-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "moussy-license"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "df361e8e-0ebc-4c0e-93e3-459bdee42866"
 migrations_dir = "migrations"
 
 # ── Non-secret config ────────────────────────────────────────────────────────
@@ -25,11 +25,13 @@ FUNGIES_API_BASE = "https://api.fungies.io"
 ALLOWED_ORIGIN = "*"
 
 # ── Rate limiting on /redeem (brute-force protection) ────────────────────────
-# Native Cloudflare Rate Limiting binding (open beta). If your account/plan
-# doesn't expose it yet, delete this block — the Worker guards for its absence
-# and /redeem still works (the ~36^15 keyspace already makes guessing hopeless).
-[[ratelimit]]
+# Native Cloudflare Rate Limiting binding. wrangler v3 uses the [[unsafe.bindings]]
+# form below (v4 accepts a top-level [[ratelimit]]). If your account/plan doesn't
+# expose it, delete this block — the Worker guards for its absence and /redeem
+# still works (the ~36^15 keyspace already makes guessing hopeless).
+[[unsafe.bindings]]
 name = "REDEEM_LIMITER"
+type = "ratelimit"
 namespace_id = "1001"          # any unique integer within this account
 simple = { limit = 8, period = 60 }   # 8 attempts / 60s per client IP
 
