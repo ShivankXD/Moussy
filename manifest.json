@@ -3,8 +3,8 @@
   "name": "MOUSSY",
   "short_name": "MOUSSY",
   "version": "0.1.0",
-  "description": "High-performance cyberpunk mouse gesture engine for Chrome. Bind gestures to actions, trigger scripts, and dominate your workflow.",
-  "author": "ShivankXD",
+  "description": "High-performance cyberpunk mouse gesture engine for Browsers. Bind gestures to actions, trigger scripts, and dominate your workflow.",
+  "author": "Shivank Tech Tools",
 
   "icons": {
     "16":  "assets/icons/decepticon-icon.png",
