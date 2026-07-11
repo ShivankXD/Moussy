@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "MOUSSY",
+  "name": "Moussy - Mouse Gestures",
   "short_name": "MOUSSY",
   "version": "0.1.0",
   "description": "High-performance cyberpunk mouse gesture engine for Browsers. Bind gestures to actions, trigger scripts, and dominate your workflow.",
